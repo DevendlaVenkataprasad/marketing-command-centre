@@ -1,0 +1,272 @@
+/* ------------------------------------------------------------------ *
+ * The department live sheet.
+ *
+ * A spreadsheet, not a form: full width, a row per entry, every cell
+ * editable where it sits. Its own stylesheet because the page has no
+ * portal chrome around it and should not inherit any.
+ * ------------------------------------------------------------------ */
+.ls-body {
+  margin: 0; background: #f6f9f8; color: #16201d;
+  font: 15px/1.6 system-ui, "Segoe UI", sans-serif;
+}
+.ls-wrap { max-width: 1680px; margin: 0 auto; padding: 22px 20px 60px; }
+
+/* ------------------------------------------------------------- header */
+.ls-head {
+  display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start;
+  justify-content: space-between; margin-bottom: 18px;
+}
+.ls-headmain { min-width: 0; flex: 1 1 420px; }
+.ls-eyebrow {
+  color: #0f6e63; font-size: 10.5px; font-weight: 800;
+  letter-spacing: .09em; text-transform: uppercase;
+}
+.ls-head h1 { margin: 4px 0 8px; font-size: 27px; font-weight: 800; letter-spacing: -.01em; }
+.ls-head p { margin: 0; max-width: 760px; color: #4a5551; font-size: 13.5px; line-height: 1.6; }
+.ls-head strong { color: #16201d; }
+.ls-head .btn { flex: none; }
+
+/* --------------------------------------------------------- the notice */
+.ls-bar {
+  display: flex; flex-wrap: wrap; gap: 14px; align-items: center;
+  justify-content: space-between; padding: 14px 18px; margin-bottom: 16px;
+  background: #e4f4f1; border: 1px solid #bfe0da; border-radius: 11px;
+}
+.ls-bar strong { font-size: 15px; }
+.ls-barnote { display: block; margin-top: 3px; color: #38423f; font-size: 12.5px; }
+.ls-baract { display: flex; gap: 10px; align-items: center; }
+
+/* Handing the sheet in. Its own form, so it sits in the bar without the
+   margin a form would otherwise bring. */
+.ls-submitform { margin: 0; display: inline-flex; }
+.ls-submitform button[disabled] { opacity: .5; cursor: not-allowed; }
+
+/* What just happened, said once, above the sheet it happened to. Submitting
+   empties the grid, and without this that reads as work lost. */
+.ls-flash {
+  margin: 0 0 14px; padding: 11px 14px; border-radius: 9px;
+  font-size: 13.5px; line-height: 1.5; border: 1px solid;
+}
+.ls-flash.good { color: #10633f; background: #e9f8f0; border-color: #bfe6cf; }
+.ls-flash.bad  { color: #8a2b2b; background: #fdeeee; border-color: #f0c9c9; }
+
+.ls-state {
+  display: inline-flex; align-items: center; gap: 7px;
+  color: #147348; font-size: 12.5px; font-weight: 650; white-space: nowrap;
+}
+.ls-state i {
+  width: 8px; height: 8px; border-radius: 50%; background: #1baf7a; flex: none;
+}
+.ls-state.busy { color: #8a6d1f; }
+.ls-state.busy i { background: #d69e2e; }
+.ls-state.bad { color: #b4232c; }
+.ls-state.bad i { background: #b4232c; }
+
+/* --------------------------------------------------------- the grid */
+.ls-gridbox {
+  background: #fff; border: 1px solid #dde6e3; border-radius: 12px; overflow: auto;
+  max-height: 72vh;
+}
+.ls-grid { width: 100%; border-collapse: separate; border-spacing: 0; }
+.ls-grid th {
+  position: sticky; top: 0; z-index: 2;
+  padding: 11px 10px; text-align: left; white-space: nowrap;
+  color: #4a5551; background: #fafcfb; border-bottom: 1px solid #dde6e3;
+  font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+}
+.ls-grid td {
+  padding: 5px 7px; border-bottom: 1px solid #eef3f1; vertical-align: middle;
+}
+.ls-grid tr:last-child td { border-bottom: 0; }
+.ls-grid tbody tr:hover td { background: #fafcfb; }
+
+/* The row number, pinned so a wide sheet keeps its place. */
+.ls-grid .ls-num {
+  position: sticky; left: 0; z-index: 1; width: 62px; min-width: 62px;
+  text-align: center; background: #fafcfb; border-right: 1px solid #eef3f1;
+}
+.ls-grid thead .ls-num { z-index: 3; }
+.ls-n { display: block; font-size: 12.5px; font-weight: 750; color: #38423f; }
+.ls-num small { display: block; color: #8b968f; font-size: 10px; }
+
+/* Cells look like text until touched, so the grid reads as a sheet. */
+.ls-cell {
+  font: inherit; font-size: 13px; width: 100%; min-width: 118px;
+  padding: 6px 8px; color: #16201d; background: transparent;
+  border: 1px solid transparent; border-radius: 6px;
+}
+.ls-cell:hover { border-color: #dde6e3; background: #fff; }
+.ls-cell:focus { border-color: #0f6e63; background: #fff; outline: none;
+                 box-shadow: 0 0 0 3px rgba(15, 110, 99, .12); }
+textarea.ls-cell { resize: vertical; min-height: 32px; line-height: 1.45; }
+select.ls-cell { min-width: 140px; cursor: pointer; }
+td.ls-bad .ls-cell { border-color: #b4232c; background: #fff0f1; }
+
+/* --------------------------------------------------------- the images */
+.ls-imgcol { min-width: 150px; }
+.ls-imgs { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.ls-imgs figure {
+  position: relative; margin: 0; width: 42px; height: 34px;
+  border-radius: 5px; overflow: hidden; border: 1px solid #dde6e3; background: #f0f4f3;
+}
+.ls-imgs img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.ls-imgs figure a { display: block; width: 100%; height: 100%; }
+.ls-imgx {
+  position: absolute; top: 0; right: 0; width: 15px; height: 15px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 0 0 0 4px; cursor: pointer;
+  color: #fff; background: rgba(20, 30, 28, .62); font-size: 12px; line-height: 1;
+}
+.ls-imgx:hover { background: #b4232c; }
+.ls-imgadd {
+  width: 34px; height: 34px; display: inline-flex; align-items: center;
+  justify-content: center; cursor: pointer; border-radius: 5px;
+  color: #0f6e63; background: #e4f4f1; border: 1px dashed #8fc9bf;
+  font-size: 17px; font-weight: 700; line-height: 1;
+}
+.ls-imgadd:hover { background: #d3ece7; }
+
+/* ------------------------------------------------------ row removal */
+.ls-rowact { width: 34px; text-align: center; }
+.ls-del {
+  width: 24px; height: 24px; padding: 0; border: 0; border-radius: 5px;
+  color: #8b968f; background: none; cursor: pointer; font-size: 17px; line-height: 1;
+}
+.ls-del:hover { color: #b4232c; background: #fff0f1; }
+
+.ls-empty { padding: 44px 20px; text-align: center; color: #667069; font-size: 13.5px; }
+.ls-foot { margin-top: 22px; text-align: center; color: #8b968f; font-size: 11.5px; }
+
+/* The page carries its own buttons, since there is no portal shell here. */
+.ls-body .btn {
+  font: inherit; font-size: 13px; font-weight: 650; padding: 9px 16px;
+  color: #16201d; background: #fff; border: 1px solid #dde6e3;
+  border-radius: 8px; cursor: pointer; text-decoration: none; display: inline-block;
+}
+.ls-body .btn:hover { border-color: #0f6e63; color: #0f6e63; }
+.ls-body .btn-primary { color: #fff; background: #0f6e63; border-color: #0f6e63; }
+.ls-body .btn-primary:hover { background: #0a4a42; border-color: #0a4a42; color: #fff; }
+.ls-body .btn:disabled { opacity: .55; cursor: default; }
+
+@media (max-width: 720px) {
+  .ls-head h1 { font-size: 22px; }
+  .ls-gridbox { max-height: none; }
+}
+
+/* The hub or spoke this sheet was shared for, beside its name. */
+.ls-hub { font-weight: 500; opacity: .7; }
+
+/* The Attachments column: documents, one per line, with what kind they are. */
+.ls-filecol { min-width: 220px; max-width: 300px; vertical-align: top; }
+.ls-files { list-style: none; margin: 0 0 6px; padding: 0; display: grid; gap: 4px; }
+.ls-files li { display: flex; align-items: center; gap: 6px; padding: 4px 6px; font-size: 12.5px;
+               background: #f6f8fb; border: 1px solid #e3e8ef; border-radius: 6px; }
+.ls-files li a { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+                 color: #1d4ed8; text-decoration: none; }
+.ls-files li a:hover { text-decoration: underline; }
+.ls-files li small { color: #7a828f; white-space: nowrap; }
+.ls-kind { flex: 0 0 auto; padding: 1px 5px; border-radius: 4px; font-size: 10px; font-weight: 700;
+           letter-spacing: .03em; color: #fff; background: #64748b; }
+.ls-filex { border: 0; background: none; padding: 0 2px; font-size: 16px; line-height: 1;
+            color: #94a3b8; cursor: pointer; }
+.ls-filex:hover { color: #c02626; }
+.ls-fileadd { display: inline-block; padding: 4px 10px; font-size: 12.5px; font-weight: 600;
+              color: #0f766e; background: #e6f4f1; border: 1px dashed #9fd3c7; border-radius: 6px;
+              cursor: pointer; }
+.ls-fileadd:hover { background: #d3ece7; }
+.ls-fileadd.busy { opacity: .6; pointer-events: none; }
+
+/* Attachments: one heading over two columns, Images and Documents. The
+   header has two rows, so the second sticks just below the first. */
+.ls-grid thead tr.ls-h1 th { height: 38px; box-sizing: border-box; }
+.ls-grid thead tr.ls-h1 th[rowspan] { vertical-align: bottom; }
+.ls-grid thead tr.ls-h2 th { top: 38px; }
+.ls-grid th.ls-attgroup {
+  text-align: center; color: #0f6e63; background: #eef6f4;
+  border-left: 1px solid #dde6e3; border-bottom: 1px solid #cfe3de;
+}
+.ls-grid thead tr.ls-h2 th { background: #f4f9f8; color: #3f5c55; }
+.ls-grid td.ls-imgcol, .ls-grid thead tr.ls-h2 th.ls-imgcol { border-left: 1px solid #e3ecea; }
+.ls-grid td.ls-filecol { vertical-align: middle; }
+
+/* Budget Required on a department's sheet (d.php, assets/livesheet.js). */
+.ls-grid th.ls-budgetcol, .ls-grid td.ls-budgetcol { min-width: 150px; }
+.ls-budget { display: block; width: 100%; text-align: left; font: inherit; font-size: 13px;
+  font-weight: 600; color: #0f6e63; background: #f2f8f6; border: 1px dashed #b9d8d0;
+  border-radius: 6px; padding: 6px 9px; cursor: pointer; }
+.ls-budget:hover { background: #e6f2ee; border-style: solid; }
+.ls-budget small { display: block; font-weight: 400; font-size: 11px; color: #5f6f69; }
+.ls-budgetoff { font-size: 12px; color: #8b968f; }
+.ls-budgetcard { max-width: 720px; }
+.lsb-table { width: 100%; margin-top: 8px; }
+.lsb-table .bqamt { width: 140px; max-width: 100%; text-align: right; }
+.lsb-files { list-style: none; margin: 0 0 4px; padding: 0; font-size: 12px; }
+.lsb-files li { margin: 2px 0; }
+.lsb-files a { color: #0f6e63; }
+
+/* Budget Required inside the + Add row box, for an Upcoming event. */
+.lsx-budget { margin-top: 20px; padding-top: 14px; border-top: 1px solid #dde6e3; }
+.lsx-budget h4 { margin: 0 0 4px; font-size: 15px; color: #16201d; }
+.lsx-budget .ls-fileadd { display: inline-block; cursor: pointer; }
+
+/* Attachments and row removal, kept in their own columns.
+   Images sit in a fixed three-across grid of equal tiles; documents keep to
+   their column and shorten long names rather than spilling into the row's
+   remove button, which stays centred in a column of its own. */
+.ls-grid td.ls-imgcol { width: 166px; min-width: 166px; vertical-align: middle; }
+.ls-imgs { display: grid; grid-template-columns: repeat(3, 48px); gap: 6px; align-items: center; }
+.ls-imgs figure { width: 48px; height: 40px; }
+.ls-imgs img { font-size: 0; color: transparent; }
+.ls-imgs figure.ls-imgbad::after {
+  content: "IMG"; position: absolute; inset: 0; display: flex; align-items: center;
+  justify-content: center; font-size: 10px; font-weight: 700; color: #7a828f;
+}
+.ls-imgs figure.ls-imgbad img { visibility: hidden; }
+.ls-imgx { z-index: 1; }
+.ls-imgadd { width: 48px; height: 40px; box-sizing: border-box; }
+
+.ls-grid td.ls-filecol { width: 280px; min-width: 280px; max-width: 280px; }
+.ls-files { grid-template-columns: minmax(0, 1fr); }
+.ls-files li { min-width: 0; }
+.ls-filex { flex: 0 0 auto; width: 18px; height: 18px; display: inline-flex;
+            align-items: center; justify-content: center; }
+
+.ls-grid th.ls-rowact { background: #f4f9f8; }
+.ls-grid td.ls-rowact, .ls-grid th.ls-rowact {
+  width: 44px; min-width: 44px; padding: 5px; text-align: center; vertical-align: middle;
+  border-left: 1px solid #e3ecea;
+}
+.ls-del { display: inline-flex; align-items: center; justify-content: center; }
+
+/* Results due: events from this sheet that have ended and still owe their
+   results (lib/evresults.php) -- on the shared sheet and a department's alike. */
+.ss-due {
+  margin: 0 0 14px; padding: 12px 14px; background: #fff8ec;
+  border: 1px solid #f2d49a; border-radius: 10px;
+}
+.ss-duehead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 8px; }
+.ss-duehead strong { font-size: 15px; color: #6b4300; }
+.ss-duehead span { font-size: 13px; color: #7a6a4f; }
+.ss-duelist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ss-duelist li {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+  background: #fff; border: 1px solid #f0e2c4; border-radius: 8px;
+}
+.ss-duetxt { flex: 1; min-width: 0; }
+.ss-duetxt strong { display: block; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ss-duetxt small { color: #6f7a76; font-size: 12.5px; }
+.ss-duepill {
+  flex: none; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  background: #fff4e0; color: #8a5300; border: 1px solid #f2d49a;
+}
+.ss-due-overdue .ss-duepill { background: #fdeceb; color: #9f1f1a; border-color: #f0b8b4; }
+.ss-duego { flex: none; text-decoration: none; }
+
+/* Who sends an event's results, in the Add event box. */
+.ss-resowner { margin-top: 14px; padding: 10px 12px; background: #f6f9f8; border: 1px solid #dde6e3; border-radius: 8px; }
+.ss-resowner input { width: 100%; }
+
+@media (max-width: 720px) {
+  .ss-duelist li { flex-wrap: wrap; }
+  .ss-duego { width: 100%; text-align: center; }
+}

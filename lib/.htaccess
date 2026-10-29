@@ -1,0 +1,2 @@
+# Never served over the web: these files are read by the portal itself.
+Require all denied

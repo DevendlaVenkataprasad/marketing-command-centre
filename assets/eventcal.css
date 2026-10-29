@@ -1,0 +1,522 @@
+/* ------------------------------------------------------------------ *
+ * The Programme Calendar.
+ *
+ * Its own palette — a teal family, carried over from the calendar module
+ * this was built from — scoped to .eventcal so the rest of the portal keeps
+ * the colours it already has. Every token is redefined for dark mode, and
+ * nothing here uses a bare hex on a background without a matching text
+ * colour beside it.
+ * ------------------------------------------------------------------ */
+.eventcal {
+  --ec-primary: #0f6e63;
+  --ec-primary-dark: #0a4a42;
+  --ec-primary-alt: #14847a;
+  --ec-soft: #e4f4f1;
+  --ec-soft-alt: #eef8f6;
+  --ec-canvas: #f6f9f8;
+  --ec-canvas-alt: #fafcfb;
+  --ec-surface: #ffffff;
+  --ec-text: #16201d;
+  --ec-text-2: #38423f;
+  --ec-muted: #667069;
+  --ec-line: #dde6e3;
+  --ec-line-soft: #e7efec;
+  --ec-border: #bfe0da;
+
+  --ec-good: #147348;  --ec-good-bg: #e8f8f0;  --ec-good-line: #bfe6cf;
+  --ec-info: #2769bf;  --ec-info-bg: #edf5ff;  --ec-info-line: #c7dcf7;
+  --ec-risk: #b4232c;  --ec-risk-bg: #fff0f1;  --ec-risk-line: #f1c6ca;
+  --ec-warn: #8a6d1f;  --ec-warn-bg: #fdf6e3;  --ec-warn-line: #ecdcb0;
+  --ec-flat: #555d68;  --ec-flat-bg: #eff1f3;  --ec-flat-line: #d8dce0;
+
+  color: var(--ec-text);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .eventcal {
+    --ec-soft: #14312c;  --ec-soft-alt: #122723;
+    --ec-canvas: #121917; --ec-canvas-alt: #161e1c; --ec-surface: #19211f;
+    --ec-text: #e8efec;  --ec-text-2: #c3cec9;  --ec-muted: #8d9a94;
+    --ec-line: #2b3a36;  --ec-line-soft: #243230; --ec-border: #2f4f49;
+    --ec-good-bg: #10281e; --ec-info-bg: #16233a; --ec-risk-bg: #33191b;
+    --ec-warn-bg: #2d2714; --ec-flat-bg: #23292c;
+  }
+}
+:root[data-theme="dark"] .eventcal {
+  --ec-soft: #14312c;  --ec-soft-alt: #122723;
+  --ec-canvas: #121917; --ec-canvas-alt: #161e1c; --ec-surface: #19211f;
+  --ec-text: #e8efec;  --ec-text-2: #c3cec9;  --ec-muted: #8d9a94;
+  --ec-line: #2b3a36;  --ec-line-soft: #243230; --ec-border: #2f4f49;
+  --ec-good-bg: #10281e; --ec-info-bg: #16233a; --ec-risk-bg: #33191b;
+  --ec-warn-bg: #2d2714; --ec-flat-bg: #23292c;
+}
+
+/* ---------------------------------------------------------- tiles */
+.eventcal .ec-tiles {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px; margin: 4px 0 16px;
+}
+.eventcal .ec-tile {
+  padding: 13px 15px; background: var(--ec-surface);
+  border: 1px solid var(--ec-line); border-left: 3px solid var(--ec-primary);
+  border-radius: 10px;
+}
+.eventcal .ec-tile span {
+  display: block; color: var(--ec-muted); font-size: 10px; font-weight: 800;
+  letter-spacing: .05em; text-transform: uppercase;
+}
+.eventcal .ec-tile strong { display: block; margin-top: 5px; font-size: 21px; font-weight: 750; }
+.eventcal .ec-tile small { display: block; margin-top: 2px; color: var(--ec-muted); font-size: 11.5px; }
+.eventcal .ec-tile .ec-alltime {
+  margin-top: 8px; padding-top: 7px; border-top: 1px dashed var(--ec-line);
+  font-size: 12.5px; color: var(--ec-muted);
+}
+.eventcal .ec-tile .ec-alltime em {
+  font-style: normal; font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+}
+.eventcal .ec-tile .ec-alltime b { color: var(--ec-text); font-weight: 750; font-size: 14px; }
+.eventcal .ec-tile .ec-alltime small { display: inline; margin: 0; font-size: 11px; }
+
+/* -------------------------------------------------------- filters */
+.eventcal .ec-filters {
+  padding: 14px 16px; margin-bottom: 14px; background: var(--ec-canvas-alt);
+  border: 1px solid var(--ec-line); border-radius: 12px;
+}
+.eventcal .ec-search input {
+  width: 100%; padding: 9px 12px; font: inherit; font-size: 13px;
+  color: var(--ec-text); background: var(--ec-surface);
+  border: 1px solid var(--ec-line); border-radius: 8px;
+}
+.eventcal .ec-search input:focus { border-color: var(--ec-primary); outline: none; }
+.eventcal .ec-filterrow {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-top: 10px;
+}
+.eventcal .ec-pick { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.eventcal .ec-pick > span {
+  color: var(--ec-muted); font-size: 10px; font-weight: 800;
+  letter-spacing: .04em; text-transform: uppercase;
+}
+.eventcal .ec-pick > span small { font-weight: 600; text-transform: none; letter-spacing: 0; }
+.eventcal .ec-pick select,
+.eventcal .ec-pick input {
+  padding: 7px 9px; font: inherit; font-size: 12.5px; max-width: 190px;
+  color: var(--ec-text); background: var(--ec-surface);
+  border: 1px solid var(--ec-line); border-radius: 7px;
+}
+.eventcal .ec-filteractions { display: flex; gap: 6px; margin-left: auto; }
+.eventcal .ec-hint { margin: 10px 0 0; color: var(--ec-muted); font-size: 11.5px; line-height: 1.5; }
+
+/* ------------------------------------------------- tabs and nav */
+.eventcal .ec-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 14px;
+}
+.eventcal .ec-tabs {
+  display: inline-flex; gap: 3px; padding: 4px;
+  background: var(--ec-canvas-alt); border: 1px solid var(--ec-line); border-radius: 11px;
+}
+.eventcal .ec-tabs a {
+  padding: 7px 14px; border-radius: 8px; color: var(--ec-text-2);
+  font-size: 12px; font-weight: 750; text-decoration: none;
+}
+.eventcal .ec-tabs a:hover { color: var(--ec-primary); }
+.eventcal .ec-tabs a.active { color: #fff; background: var(--ec-primary); }
+.eventcal .ec-nav { display: inline-flex; gap: 6px; }
+.eventcal .ec-nav a {
+  min-width: 34px; height: 34px; padding: 0 11px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--ec-text-2); background: var(--ec-surface);
+  border: 1px solid var(--ec-line); border-radius: 9px;
+  font-size: 13px; font-weight: 750; text-decoration: none;
+}
+.eventcal .ec-nav a:hover { color: var(--ec-primary); border-color: var(--ec-primary); }
+.eventcal .ec-heading { margin: 0; font-size: 16px; font-weight: 800; }
+.eventcal .ec-count { margin-left: auto; color: var(--ec-muted); font-size: 12px; }
+
+/* ----------------------------------------------------- the layout */
+.eventcal .ec-layout {
+  display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, .5fr);
+  gap: 16px; align-items: start;
+}
+@media (max-width: 1100px) { .eventcal .ec-layout { grid-template-columns: 1fr; } }
+
+/* ------------------------------------------------------ month view */
+.eventcal .ec-month {
+  display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px;
+  background: var(--ec-line); border: 1px solid var(--ec-line);
+  border-radius: 12px; overflow: hidden;
+}
+.eventcal .ec-dow {
+  padding: 8px 6px; text-align: center; background: var(--ec-canvas-alt);
+  color: var(--ec-muted); font-size: 10px; font-weight: 800;
+  letter-spacing: .05em; text-transform: uppercase;
+}
+.eventcal .ec-cell {
+  min-height: 104px; padding: 6px; display: flex; flex-direction: column; gap: 3px;
+  background: var(--ec-surface); min-width: 0;
+}
+.eventcal .ec-cell.other { background: var(--ec-canvas); }
+.eventcal .ec-cell.other .ec-date { color: var(--ec-muted); }
+.eventcal .ec-date {
+  align-self: flex-start; width: 23px; height: 23px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; font-size: 11.5px; font-weight: 750;
+}
+.eventcal .ec-cell.today .ec-date { color: #fff; background: var(--ec-primary); }
+.eventcal .ec-more summary {
+  padding: 2px 5px; color: var(--ec-muted); font-size: 10px; font-weight: 750;
+  cursor: pointer; list-style: none;
+}
+.eventcal .ec-more summary::-webkit-details-marker { display: none; }
+.eventcal .ec-more[open] summary { margin-bottom: 3px; }
+.eventcal .ec-more .ec-chip { margin-bottom: 3px; }
+
+/* ----------------------------------------------------------- chips */
+.eventcal .ec-chip {
+  display: block; width: 100%; padding: 4px 7px; text-align: left;
+  font: inherit; font-size: 10.5px; font-weight: 700; line-height: 1.4;
+  border-radius: 7px; cursor: pointer;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--ec-primary-dark); background: var(--ec-soft);
+  border: 1px solid var(--ec-border);
+}
+.eventcal .ec-chip:hover { border-color: var(--ec-primary); }
+.eventcal .ec-chip.tone-approved  { color: var(--ec-good); background: var(--ec-good-bg); border-color: var(--ec-good-line); }
+.eventcal .ec-chip.tone-completed { color: var(--ec-info); background: var(--ec-info-bg); border-color: var(--ec-info-line); }
+.eventcal .ec-chip.tone-rejected  { color: var(--ec-risk); background: var(--ec-risk-bg); border-color: var(--ec-risk-line); }
+.eventcal .ec-chip.tone-live      { color: var(--ec-warn); background: var(--ec-warn-bg); border-color: var(--ec-warn-line); }
+.eventcal .ec-chip.tone-other     { color: var(--ec-flat); background: var(--ec-flat-bg); border-color: var(--ec-flat-line); }
+/* Chips from the other sheets are quieter: this is the Events calendar,
+   and they are context, not the subject. */
+.eventcal .ec-chip.ec-other {
+  color: var(--ec-muted); background: var(--ec-canvas-alt);
+  border-color: var(--ec-line-soft); border-left: 3px solid var(--ec-muted);
+  font-weight: 600; cursor: default;
+}
+.eventcal .ec-chip.ec-other.src-content  { border-left-color: #2769bf; }
+.eventcal .ec-chip.ec-other.src-campaign { border-left-color: #8a6d1f; }
+.eventcal .ec-chip.ec-other.src-design   { border-left-color: #7a3fb8; }
+.eventcal .ec-chip.ec-other.src-festival { border-left-color: #b4232c; }
+.eventcal .ec-chip.ec-other.src-creative { border-left-color: #0f6e63; }
+
+.eventcal .ec-legend {
+  display: flex; flex-wrap: wrap; gap: 14px; align-items: center;
+  margin-top: 10px; color: var(--ec-muted); font-size: 11.5px;
+}
+.eventcal .ec-legend i {
+  display: inline-block; width: 11px; height: 11px; margin-right: 6px;
+  border-radius: 3px; vertical-align: -1px; background: var(--ec-muted);
+}
+.eventcal .ec-legend .src-content  { background: #2769bf; }
+.eventcal .ec-legend .src-campaign { background: #8a6d1f; }
+.eventcal .ec-legend .src-design   { background: #7a3fb8; }
+.eventcal .ec-legend .src-festival { background: #b4232c; }
+.eventcal .ec-legend .src-creative { background: #0f6e63; }
+.eventcal .ec-legend-note { margin-left: auto; }
+
+/* ------------------------------------------------------- week view */
+.eventcal .ec-week {
+  display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px;
+  background: var(--ec-line); border: 1px solid var(--ec-line);
+  border-radius: 12px; overflow: hidden;
+}
+.eventcal .ec-weekcell {
+  min-height: 210px; padding: 9px; display: flex; flex-direction: column; gap: 5px;
+  background: var(--ec-surface); min-width: 0;
+}
+.eventcal .ec-weekcell.today { background: var(--ec-soft-alt); }
+.eventcal .ec-weekhead {
+  display: flex; flex-direction: column; margin-bottom: 3px;
+  padding-bottom: 6px; border-bottom: 1px solid var(--ec-line-soft);
+}
+.eventcal .ec-weekhead strong { font-size: 12px; }
+.eventcal .ec-weekhead span { color: var(--ec-muted); font-size: 11px; }
+.eventcal .ec-none { color: var(--ec-muted); font-size: 12px; margin: 0; }
+
+/* --------------------------------------------- day and agenda cards */
+.eventcal .ec-cards { display: grid; gap: 9px; }
+.eventcal .ec-monthmark {
+  margin: 12px 0 2px; color: var(--ec-muted); font-size: 10.5px; font-weight: 800;
+  letter-spacing: .05em; text-transform: uppercase;
+}
+.eventcal .ec-monthmark:first-child { margin-top: 0; }
+.eventcal .ec-card {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  justify-content: space-between; padding: 13px 15px;
+  background: var(--ec-surface); border: 1px solid var(--ec-line);
+  border-left: 3px solid var(--ec-primary); border-radius: 11px;
+}
+.eventcal .ec-card.tone-approved  { border-left-color: var(--ec-good); }
+.eventcal .ec-card.tone-completed { border-left-color: var(--ec-info); }
+.eventcal .ec-card.tone-rejected  { border-left-color: var(--ec-risk); }
+.eventcal .ec-card.tone-live      { border-left-color: var(--ec-warn); }
+.eventcal .ec-card.tone-other     { border-left-color: var(--ec-flat); }
+.eventcal .ec-cardmain { min-width: 0; flex: 1 1 260px; }
+.eventcal .ec-cardmain strong { display: block; font-size: 13.5px; }
+.eventcal .ec-cardmain small { display: block; margin-top: 3px; color: var(--ec-muted); font-size: 11.5px; }
+.eventcal .ec-cardmain em { color: var(--ec-risk); font-style: normal; font-weight: 600; }
+.eventcal .ec-cardside { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.eventcal .ec-cardhit { width: auto; padding: 5px 11px; font-size: 11px; }
+.eventcal .ec-sign {
+  padding: 3px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 750;
+  color: var(--ec-flat); background: var(--ec-flat-bg); border: 1px solid var(--ec-flat-line);
+}
+.eventcal .ec-sign.tone-approved  { color: var(--ec-good); background: var(--ec-good-bg); border-color: var(--ec-good-line); }
+.eventcal .ec-sign.tone-rejected  { color: var(--ec-risk); background: var(--ec-risk-bg); border-color: var(--ec-risk-line); }
+.eventcal .ec-sign.tone-completed { color: var(--ec-info); background: var(--ec-info-bg); border-color: var(--ec-info-line); }
+
+.eventcal .ec-empty {
+  padding: 48px 20px; text-align: center; background: var(--ec-surface);
+  border: 1px solid var(--ec-line); border-radius: 12px;
+}
+.eventcal .ec-empty strong { display: block; font-size: 14px; }
+.eventcal .ec-empty span { display: block; margin-top: 5px; color: var(--ec-muted); font-size: 12.5px; }
+
+/* ------------------------------------------------------- side panel */
+.eventcal .ec-side {
+  padding: 15px 17px; background: var(--ec-surface);
+  border: 1px solid var(--ec-line); border-radius: 12px;
+}
+.eventcal .ec-side h3 {
+  margin: 0 0 10px; font-size: 11px; font-weight: 800;
+  letter-spacing: .05em; text-transform: uppercase; color: var(--ec-muted);
+}
+.eventcal .ec-upcoming { margin: 0; padding: 0; list-style: none; }
+.eventcal .ec-upcoming li { padding: 9px 0; border-bottom: 1px solid var(--ec-line-soft); }
+.eventcal .ec-upcoming li:last-child { border-bottom: 0; }
+.eventcal .ec-upcoming small { display: block; margin-top: 4px; color: var(--ec-muted); font-size: 11px; }
+
+/* ----------------------------------------------------- detail panel */
+.ec-dialog {
+  width: min(760px, calc(100% - 32px)); max-height: min(88dvh, 780px);
+  margin: auto; padding: 0; overflow: auto; border: 0; border-radius: 14px;
+  color: #16201d; background: #f6f9f8;
+  box-shadow: 0 28px 90px rgba(15, 23, 42, .34);
+}
+.ec-dialog::backdrop { background: rgba(15, 23, 42, .6); }
+.ec-dhead {
+  position: sticky; top: 0; z-index: 2; padding: 16px 20px;
+  display: flex; align-items: center; justify-content: space-between; gap: 18px;
+  color: #fff; background: linear-gradient(110deg, #0a4a42, #0f6e63);
+}
+.ec-dhead h2 { margin: 3px 0 0; color: #fff; font-size: 16px; }
+.ec-dhead span { font-size: 11px; font-weight: 700; opacity: .85; }
+.ec-dx {
+  border: 0; background: none; color: #fff; font-size: 24px; line-height: 1;
+  cursor: pointer; padding: 0 2px;
+}
+.ec-dbody { padding: 16px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; }
+@media (max-width: 620px) { .ec-dbody { grid-template-columns: 1fr; } }
+.ec-detail { padding: 6px 0; min-width: 0; }
+.ec-detail.wide { grid-column: 1 / -1; }
+.ec-detail span {
+  display: block; color: #667069; font-size: 9.5px; font-weight: 750;
+  letter-spacing: .04em; text-transform: uppercase;
+}
+.ec-detail strong {
+  display: block; margin-top: 3px; font-size: 12.5px; font-weight: 600;
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.ec-dfoot {
+  position: sticky; bottom: 0; padding: 13px 20px;
+  display: flex; justify-content: flex-end; gap: 8px;
+  background: #fff; border-top: 1px solid #dde6e3;
+}
+.ec-dialog .ec-none { padding: 20px 0; color: #667069; }
+
+/* ------------------------------------------------------ programme form */
+.ec-formdlg { width: min(880px, calc(100% - 32px)); }
+.ec-formbody { grid-template-columns: 1fr 1fr; gap: 10px 18px; }
+@media (max-width: 680px) { .ec-formbody { grid-template-columns: 1fr; } }
+.ec-formgroup {
+  grid-column: 1 / -1; margin: 14px 0 0; padding-bottom: 6px;
+  border-bottom: 1px solid #dde6e3; color: #0f6e63;
+  font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+}
+.ec-formgroup:first-of-type { margin-top: 0; }
+.ec-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ec-field.wide { grid-column: 1 / -1; }
+.ec-field label { color: #667069; font-size: 11px; font-weight: 700; }
+.ec-field input,
+.ec-field select,
+.ec-field textarea {
+  font: inherit; font-size: 13px; padding: 7px 9px; width: 100%;
+  color: #16201d; background: #fff; border: 1px solid #dde6e3; border-radius: 7px;
+}
+.ec-field textarea { resize: vertical; min-height: 44px; }
+.ec-field input:focus,
+.ec-field select:focus,
+.ec-field textarea:focus { border-color: #0f6e63; outline: none; }
+.ec-formmsg { margin-right: auto; align-self: center; color: #667069; font-size: 12.5px; }
+.ec-formmsg.bad { color: #b4232c; font-weight: 600; }
+
+/* ------------------------------------------------ departments & media */
+.eventcal .deptpickbar {
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+  padding: 12px 14px; margin-bottom: 14px; background: var(--ec-canvas-alt);
+  border: 1px solid var(--ec-line); border-radius: 10px;
+}
+.eventcal .deptpickbar label { display: flex; gap: 8px; align-items: center; font-size: 12px; font-weight: 700; }
+.eventcal .deptpickbar select {
+  font: inherit; font-size: 13px; padding: 7px 9px; max-width: 360px;
+  color: var(--ec-text); background: var(--ec-surface);
+  border: 1px solid var(--ec-line); border-radius: 7px;
+}
+.eventcal .deptpickhint { margin-left: auto; color: var(--ec-muted); font-size: 11.5px; }
+
+.eventcal .deptfresh {
+  padding: 14px 16px; margin-bottom: 14px; border-radius: 10px;
+  background: var(--ec-soft); border: 1px solid var(--ec-border);
+}
+.eventcal .deptfresh p { margin: 4px 0 10px; color: var(--ec-text-2); font-size: 12.5px; }
+.eventcal .deptlinkrow { display: flex; gap: 8px; }
+.eventcal .deptlink {
+  flex: 1; min-width: 0; font: inherit; font-size: 12px; padding: 8px 10px;
+  font-family: ui-monospace, Consolas, monospace;
+  color: var(--ec-text); background: var(--ec-surface);
+  border: 1px solid var(--ec-border); border-radius: 7px;
+}
+/* A live link in its row of the table, to copy again whenever it is needed. */
+.eventcal .deptlinkcell { margin-top: 6px; min-width: 260px; align-items: center; }
+.eventcal .deptlinkcell .deptlink { padding: 5px 8px; font-size: 11.5px; }
+.eventcal .deptexp { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
+.eventcal .deptexp label { display: flex; gap: 6px; align-items: center; font-size: 12px;
+  color: var(--ec-text-2); white-space: nowrap; }
+.eventcal .deptexp input[type=date] { font: inherit; font-size: 12px; padding: 4px 6px;
+  color: var(--ec-text); background: var(--ec-surface);
+  border: 1px solid var(--ec-border); border-radius: 7px; }
+.eventcal .deptbtns { white-space: nowrap; }
+.eventcal .deptbtns form { display: flex; gap: 4px; flex-wrap: wrap; }
+
+.eventcal .deptadd {
+  padding: 14px 16px; margin-top: 14px; background: var(--ec-canvas-alt);
+  border: 1px solid var(--ec-line); border-radius: 10px;
+}
+.eventcal .deptaddrow { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.eventcal .deptaddrow label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; font-weight: 700; color: var(--ec-muted); }
+.eventcal .deptaddrow input,
+.eventcal .deptaddrow select {
+  font: inherit; font-size: 13px; padding: 7px 9px; min-width: 150px;
+  color: var(--ec-text); background: var(--ec-surface);
+  border: 1px solid var(--ec-line); border-radius: 7px;
+}
+.eventcal .deptmediahead { margin: 22px 0 10px; font-size: 14px; }
+.eventcal .deptcount { margin-left: 8px; color: var(--ec-muted); font-size: 12px; font-weight: 500; }
+
+.deptgallery {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px;
+}
+.deptgallery.wide { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+.deptgallery figure {
+  margin: 0; background: #fff; border: 1px solid #dde6e3; border-radius: 9px; overflow: hidden;
+}
+.deptgallery img { display: block; width: 100%; height: 130px; object-fit: cover; background: #f0f4f3; }
+.deptgallery figcaption {
+  padding: 7px 9px; font-size: 11.5px; line-height: 1.4; color: #16201d;
+  overflow-wrap: anywhere;
+}
+.deptgallery figcaption small { display: block; margin-top: 2px; color: #667069; font-size: 10.5px; }
+
+/* ------------------------------------------- the department's own page */
+body.deptbody { background: #f6f9f8; margin: 0; }
+.deptwrap { max-width: 1000px; margin: 0 auto; padding: 24px 16px 60px; }
+.depthead {
+  display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between;
+  align-items: flex-start; padding: 20px 22px; border-radius: 12px;
+  color: #fff; background: linear-gradient(110deg, #0a4a42, #0f6e63);
+}
+.depthead h1 { margin: 4px 0 0; font-size: 21px; color: #fff; }
+.depthead p { margin: 6px 0 0; font-size: 13px; opacity: .9; }
+.depthead .eyebrow { font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; opacity: .85; }
+.deptmeta { text-align: right; font-size: 12px; }
+.deptmeta span { display: block; opacity: .8; font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; }
+.deptmeta strong { display: block; margin-top: 2px; }
+.deptmeta small { display: block; margin-top: 4px; opacity: .8; }
+.deptintro { margin: 16px 0; color: #38423f; font-size: 13px; line-height: 1.6; }
+.deptcard {
+  padding: 18px 20px; margin-bottom: 16px; background: #fff;
+  border: 1px solid #dde6e3; border-radius: 12px;
+}
+.deptcardhead { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.deptcardhead h2 { margin: 0; font-size: 15px; }
+.deptcount { color: #667069; font-size: 12px; }
+.deptrow { padding: 14px 0; border-top: 1px solid #e7efec; }
+.deptrow:first-of-type { border-top: 0; }
+.deptrowhead { margin-bottom: 8px; font-size: 12px; color: #667069; }
+.deptfields { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px 14px; }
+.deptfield { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.deptfield.wide { grid-column: 1 / -1; }
+.deptfield label { font-size: 11px; font-weight: 700; color: #667069; }
+.deptfield input, .deptfield select, .deptfield textarea {
+  font: inherit; font-size: 13px; padding: 7px 9px; width: 100%;
+  color: #16201d; background: #fff; border: 1px solid #dde6e3; border-radius: 7px;
+}
+.deptfield textarea { resize: vertical; min-height: 44px; }
+.deptfield input:focus, .deptfield select:focus, .deptfield textarea:focus { border-color: #0f6e63; outline: none; }
+.deptactions { margin-top: 16px; padding-top: 14px; border-top: 1px solid #e7efec; }
+.deptdeletes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.deptupload { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.deptupload input[type=file] { font-size: 13px; }
+.deptupload input[name=caption] {
+  flex: 1; min-width: 180px; font: inherit; font-size: 13px; padding: 7px 9px;
+  border: 1px solid #dde6e3; border-radius: 7px;
+}
+.deptwrap .deptgallery { margin-top: 14px; }
+.deptfoot { margin-top: 26px; text-align: center; color: #667069; font-size: 11.5px; }
+form.inline { display: inline-block; margin: 0; }
+.eventcal .deptmsg {
+  padding: 8px 12px; margin: 10px 0; border-radius: 7px; font-size: 12.5px;
+  color: var(--ec-text-2); background: var(--ec-canvas-alt); border: 1px solid var(--ec-line);
+}
+.eventcal .deptmsg.bad { color: var(--ec-risk); background: var(--ec-risk-bg); border-color: var(--ec-risk-line); font-weight: 600; }
+
+/* Seven figures, the dashboard's own: one row on a wide screen, then wrapping evenly. */
+.eventcal .ec-tiles7 { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+@media (max-width: 1280px) { .eventcal .ec-tiles7 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 760px)  { .eventcal .ec-tiles7 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.eventcal .ec-tiles7 .ec-tile { display: flex; flex-direction: column; min-width: 0; }
+.eventcal .ec-tiles7 .ec-tile span { min-height: 2.6em; }
+.eventcal .ec-tiles7 .ec-tile strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.eventcal .ec-tiles7 .ec-alltime { margin-top: auto; }
+
+/* The seven figure cards: a colour of their own, a soft lift, a clear all-time strip. */
+.eventcal .ec-tiles7 { gap: 12px; }
+.eventcal .ec-tile.ec-fig {
+  position: relative; overflow: hidden;
+  padding: 14px 16px 12px 18px;
+  border: 1px solid var(--ec-line); border-left: 0; border-radius: 12px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 6%, var(--ec-surface)) 0, var(--ec-surface) 64px);
+  box-shadow: 0 1px 2px rgba(22, 32, 29, .05);
+  transition: box-shadow .15s ease, transform .15s ease;
+}
+.eventcal .ec-tile.ec-fig::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--c);
+}
+.eventcal .ec-tile.ec-fig:hover { box-shadow: 0 8px 22px rgba(22, 32, 29, .09); transform: translateY(-2px); }
+.eventcal .ec-tile.ec-fig span {
+  display: flex; align-items: flex-start; gap: 7px;
+  color: var(--ec-muted); font-size: 10.5px; font-weight: 800; letter-spacing: .06em; line-height: 1.3;
+}
+.eventcal .ec-tile.ec-fig span::before {
+  content: ""; flex: none; width: 8px; height: 8px; margin-top: 3px; border-radius: 50%; background: var(--c);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 18%, transparent);
+}
+.eventcal .ec-tile.ec-fig strong {
+  margin-top: 8px; font-size: 25px; font-weight: 800; color: var(--ec-text);
+  font-variant-numeric: tabular-nums; letter-spacing: -.01em;
+}
+.eventcal .ec-tile.ec-fig small { margin-top: 3px; font-size: 11.5px; color: var(--ec-muted); }
+.eventcal .ec-tile.ec-good strong { color: #1a7f44; }
+.eventcal .ec-tile.ec-warn strong { color: #a76a00; }
+.eventcal .ec-tile.ec-risk strong { color: #b3261e; }
+.eventcal .ec-tile.ec-risk { background: #fff8f7; }
+.eventcal .ec-tile.ec-fig .ec-alltime {
+  margin: 12px -16px -12px -18px; padding: 8px 16px 9px 18px;
+  border-top: 1px solid var(--ec-line);
+  background: color-mix(in srgb, var(--c) 5%, var(--ec-canvas-alt));
+  font-size: 12px; color: var(--ec-muted);
+}
+.eventcal .ec-tile.ec-fig .ec-alltime em {
+  font-style: normal; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; margin-right: 4px;
+}
+.eventcal .ec-tile.ec-fig .ec-alltime b { font-size: 14px; font-weight: 800; color: var(--ec-text); font-variant-numeric: tabular-nums; }
+.eventcal .ec-tile.ec-fig .ec-alltime small { display: inline; margin: 0 0 0 3px; font-size: 11px; }

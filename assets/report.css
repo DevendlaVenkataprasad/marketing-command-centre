@@ -1,0 +1,248 @@
+/* ------------------------------------------------------------------ *
+ * The event report: a period, every event in it, and the figures.
+ *
+ * Built to be printed: the toolbar disappears, the page goes to A4, and
+ * nothing is allowed to break across a page in the middle of an event.
+ * ------------------------------------------------------------------ */
+.rp-body { margin: 0; background: #eef2f1; color: #16201d;
+           font: 15px/1.65 system-ui, "Segoe UI", sans-serif; }
+
+/* ------------------------------------------------------------ toolbar */
+.rp-bar {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+  padding: 12px 20px; background: #fff; border-bottom: 1px solid #dde6e3;
+}
+.rp-spacer { flex: 1; }
+.rp-pick { display: flex; flex-direction: column; gap: 4px;
+           font-size: 10px; font-weight: 800; letter-spacing: .05em;
+           text-transform: uppercase; color: #8b968f; }
+.rp-pick select, .rp-pick input {
+  font: inherit; font-size: 13px; font-weight: 400; letter-spacing: 0;
+  text-transform: none; color: #16201d; padding: 7px 9px; min-width: 150px;
+  background: #fff; border: 1px solid #dde6e3; border-radius: 7px;
+}
+.rp-pick select:focus, .rp-pick input:focus { border-color: #0f6e63; outline: none; }
+.rp-bar .btn { align-self: flex-end; }
+
+/* -------------------------------------------------------- the sheet */
+.rp {
+  max-width: 940px; margin: 22px auto 60px; padding: 42px 46px;
+  background: #fff; border: 1px solid #dde6e3; border-radius: 10px;
+}
+
+.rp-head {
+  display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-between;
+  align-items: flex-start; padding-bottom: 20px; margin-bottom: 4px;
+  border-bottom: 2px solid #0f6e63;
+}
+.rp-eyebrow { color: #0f6e63; font-size: 10.5px; font-weight: 800;
+              letter-spacing: .1em; text-transform: uppercase; }
+.rp-head h1 { margin: 5px 0 6px; font-size: 26px; font-weight: 800; letter-spacing: -.01em; }
+.rp-head p { margin: 0; color: #4a5551; font-size: 13.5px; }
+.rp-meta { text-align: right; font-size: 12px; color: #667069; }
+.rp-meta span { display: block; font-size: 10px; letter-spacing: .05em; text-transform: uppercase; }
+.rp-meta strong { display: block; margin-bottom: 6px; color: #16201d; font-size: 13px; }
+
+.rp-note {
+  padding: 11px 14px; margin: 18px 0; border-radius: 8px; font-size: 13px;
+  color: #8a6d1f; background: #fdf6e3; border: 1px solid #ecdcb0;
+}
+.rp-none { padding: 44px 20px; text-align: center; color: #667069; font-size: 14px; }
+
+/* -------------------------------------------------------- sections */
+.rp-sec { margin-top: 28px; }
+.rp-sec > h2 {
+  margin: 0 0 12px; padding-bottom: 7px; font-size: 12.5px; font-weight: 800;
+  letter-spacing: .06em; text-transform: uppercase; color: #0f6e63;
+  border-bottom: 1px solid #e7efec;
+}
+.rp-count { margin-left: 7px; color: #8b968f; font-weight: 500;
+            letter-spacing: 0; text-transform: none; font-size: 11.5px; }
+
+/* The headline row. */
+.rp-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(124px, 1fr)); gap: 10px; }
+.rp-tile { padding: 12px 14px; background: #fafcfb;
+           border: 1px solid #e7efec; border-left: 3px solid #0f6e63; border-radius: 8px; }
+.rp-tile span { display: block; color: #8b968f; font-size: 9.5px; font-weight: 800;
+                letter-spacing: .06em; text-transform: uppercase; }
+.rp-tile strong { display: block; margin-top: 4px; font-size: 21px; font-weight: 750; }
+
+/* The narrative keeps the model's own headings, styled like the rest. */
+.rp-narrative h2 { margin: 18px 0 7px; font-size: 12px; font-weight: 800;
+                   letter-spacing: .06em; text-transform: uppercase; color: #0f6e63; }
+.rp-narrative h2:first-child { margin-top: 0; }
+.rp-narrative p { margin: 0 0 6px; font-size: 14px; }
+.rp-gap { height: 4px; }
+.rp-ai { margin-top: 16px; color: #8b968f; font-size: 11.5px; font-style: italic; }
+
+/* ---------------------------------------------------------- tables */
+.rp-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.rp-table th {
+  padding: 8px 10px; text-align: left; color: #667069; background: #fafcfb;
+  border-bottom: 1px solid #dde6e3; font-size: 10px; font-weight: 800;
+  letter-spacing: .05em; text-transform: uppercase; white-space: nowrap;
+}
+.rp-table td { padding: 8px 10px; border-bottom: 1px solid #eef3f1; }
+.rp-table tr:last-child td { border-bottom: 0; }
+.rp-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rp-table th.num { text-align: right; }
+.rp-mini { margin: 10px 0 12px; font-size: 12.5px; }
+.rp-mini th, .rp-mini td { padding: 5px 9px; }
+
+.rp-pill {
+  display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px;
+  font-weight: 650; white-space: nowrap;
+  color: #555d68; background: #eff1f3; border: 1px solid #d8dce0;
+}
+.rp-pill.good { color: #147348; background: #e8f8f0; border-color: #bfe6cf; }
+.rp-pill.warn { color: #8a6d1f; background: #fdf6e3; border-color: #ecdcb0; }
+.rp-pill.risk { color: #b4232c; background: #fff0f1; border-color: #f1c6ca; }
+
+/* --------------------------------------------------- event by event */
+.rp-event {
+  padding: 16px 18px; margin-bottom: 14px;
+  background: #fafcfb; border: 1px solid #e7efec; border-radius: 9px;
+}
+.rp-eventhead { margin-bottom: 10px; }
+.rp-eventhead h3 {
+  display: flex; align-items: baseline; gap: 9px; margin: 0 0 4px; font-size: 15px;
+}
+.rp-no {
+  flex: none; width: 22px; height: 22px; display: inline-flex;
+  align-items: center; justify-content: center; border-radius: 50%;
+  color: #fff; background: #0f6e63; font-size: 11px; font-weight: 750;
+}
+.rp-eventmeta { color: #667069; font-size: 12.5px; padding-left: 31px; }
+.rp-dept {
+  margin-left: 7px; padding: 1px 8px; border-radius: 999px; font-size: 10.5px;
+  font-weight: 650; color: #0f6e63; background: #e4f4f1; border: 1px solid #bfe0da;
+}
+
+/* A label-and-value list that lines up whatever the labels are.
+   The pair is the grid item, not the label and the value separately: with
+   separate items a row that was not filled to the end put the next label
+   beside the previous value, and the headings stopped matching what was
+   under them. */
+.rp-detail {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 9px 20px; margin: 0; align-items: start;
+}
+.rp-detail > div { min-width: 0; }
+.rp-detail dt { color: #8b968f; font-size: 9.5px; font-weight: 800;
+                letter-spacing: .04em; text-transform: uppercase; line-height: 1.4; }
+.rp-detail dd { margin: 2px 0 0; font-size: 13px; line-height: 1.45;
+                overflow-wrap: anywhere; }
+
+.rp-parts { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #dde6e3; }
+.rp-parts h4 { margin: 0 0 8px; color: #667069; font-size: 10.5px; font-weight: 800;
+               letter-spacing: .05em; text-transform: uppercase; }
+.rp-part { padding: 9px 0; border-top: 1px solid #eef3f1; }
+.rp-part:first-of-type { border-top: 0; }
+.rp-part > strong { font-size: 13px; }
+.rp-ref { margin-left: 7px; color: #8b968f; font-size: 11px;
+          font-family: ui-monospace, Consolas, monospace; }
+.rp-part .rp-detail { margin-top: 6px; }
+.rp-empty { margin: 4px 0 0; color: #8b968f; font-size: 12.5px; }
+
+/* ------------------------------------------------------ photographs */
+.rp-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 11px; }
+.rp-gallery figure { margin: 0; border: 1px solid #dde6e3; border-radius: 8px; overflow: hidden; }
+.rp-gallery img { display: block; width: 100%; height: 124px; object-fit: cover; background: #f0f4f3; }
+.rp-gallery figcaption { padding: 7px 9px; font-size: 11.5px; overflow-wrap: anywhere; }
+.rp-gallery figcaption small { display: block; margin-top: 2px; color: #8b968f; font-size: 10.5px; }
+
+.rp-foot {
+  margin-top: 32px; padding-top: 14px; border-top: 1px solid #e7efec;
+  text-align: center; color: #8b968f; font-size: 11px;
+}
+
+/* ------------------------------------------------------------ print */
+@page { size: A4; margin: 14mm; }
+
+@media print {
+  .rp-body { background: #fff; }
+  .no-print { display: none !important; }
+  .rp { max-width: none; margin: 0; padding: 0; border: 0; border-radius: 0; }
+
+  /* Nothing should be cut in half by a page break. */
+  .rp-sec, .rp-event, .rp-part, .rp-gallery figure, .rp-table tr, .rp-tile,
+  .rp-kpi, .rp-eventshots, .rp-fact, .rp-detail > div { break-inside: avoid; }
+  .rp-sec > h2, .rp-narrative h2, .rp-eventhead { break-after: avoid; }
+  .rp-table thead { display: table-header-group; }
+
+  /* Print engines drop backgrounds by default, which would take the pills
+     and the headers with them; ask for them explicitly. */
+  .rp-pill, .rp-table th, .rp-dept, .rp-no, .rp-tile, .rp-event {
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .rp-gallery img { height: 104px; }
+  .rp-gallery.small img { height: 80px; }
+  .rp-kpi { background: #fff; border-color: #ccd8d4; }
+  .rp-share { border: 1px solid #ccd8d4; }
+  .rp-fact, .rp-chip { background: #fff; border-color: #ccd8d4; }
+  a { text-decoration: none; color: inherit; }
+}
+
+@media (max-width: 680px) {
+  .rp { padding: 24px 20px; margin: 12px; }
+  .rp-head h1 { font-size: 21px; }
+}
+
+/* --------------------------------------------- performance and efficiency */
+/* A ratio needs its wording beside it to mean anything, so each figure
+   carries a line saying what it is a ratio of. */
+.rp-kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 10px; }
+.rp-kpi { padding: 11px 13px; background: #fafcfb;
+          border: 1px solid #e3ebe8; border-radius: 10px; }
+.rp-kpilab { display: block; color: #8b968f; font-size: 9.5px; font-weight: 800;
+             letter-spacing: .06em; text-transform: uppercase; }
+.rp-kpi strong { display: block; margin-top: 3px; font-size: 18px; font-weight: 750;
+                 font-variant-numeric: tabular-nums; }
+.rp-kpihint { display: block; margin-top: 3px; color: #8b968f; font-size: 11px; line-height: 1.35; }
+
+/* --------------------------------------------------------- status spread */
+.rp-narrowtable { max-width: 560px; }
+.rp-share { display: block; width: 100%; height: 7px; background: #eef3f1; border-radius: 4px; }
+.rp-share > span { display: block; height: 100%; min-width: 2px;
+                   background: #2f7d63; border-radius: 4px; }
+
+/* -------------------------------------------- one event's photographs */
+.rp-eventshots { margin-top: 12px; }
+.rp-eventshots h4 { margin: 0 0 7px; color: #8b968f; font-size: 10px; font-weight: 800;
+                    letter-spacing: .06em; text-transform: uppercase; }
+.rp-gallery.small { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 8px; }
+.rp-gallery.small img { height: 92px; }
+.rp-gallery.small figcaption { padding: 5px 7px; font-size: 10.5px; }
+
+/* ------------------------------------------- one event, at a glance */
+/* The figures somebody looks for first, before reading anything else. */
+.rp-facts {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  gap: 8px; margin-bottom: 12px;
+}
+.rp-fact { padding: 7px 10px; background: #fff;
+           border: 1px solid #e7efec; border-radius: 8px; }
+.rp-fact span { display: block; color: #8b968f; font-size: 9px; font-weight: 800;
+                letter-spacing: .05em; text-transform: uppercase; }
+.rp-fact strong { display: block; margin-top: 2px; font-size: 14px; font-weight: 700;
+                  overflow-wrap: anywhere; }
+
+/* The same ratios as the portfolio section, for this event alone. */
+.rp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 12px; }
+.rp-chip { padding: 4px 10px; font-size: 11px; color: #4a5551;
+           background: #fff; border: 1px solid #e0e9e6; border-radius: 999px; }
+.rp-chip b { margin-left: 5px; color: #0f6e63; font-weight: 750; }
+
+/* Long answers read as prose rather than as a value in a narrow column. */
+.rp-prose { margin-top: 12px; }
+.rp-prose h5 { margin: 10px 0 3px; color: #8b968f; font-size: 9.5px; font-weight: 800;
+               letter-spacing: .05em; text-transform: uppercase; }
+.rp-prose h5:first-child { margin-top: 0; }
+.rp-prose p { margin: 0 0 6px; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+
+/* The index table: a tfoot that reads as the total it is. */
+.rp-table tfoot td { padding: 9px 10px; border-top: 2px solid #e7efec;
+                     font-weight: 700; font-variant-numeric: tabular-nums; }
+.rp-table tfoot td:nth-child(2) { color: #8b968f; font-weight: 800; font-size: 11px;
+                                  letter-spacing: .04em; text-transform: uppercase; }

@@ -1,0 +1,68 @@
+/* ------------------------------------------------------------------ *
+ * The shared live sheet (s.php) -- on top of livesheet.css, which it
+ * shares its look with. Only what is new here: read-only cells, cells
+ * shut until a date, checkboxes, single-file cells, the live cues.
+ * ------------------------------------------------------------------ */
+
+/* A column the portal fills in: shown, not typed. */
+.ss-lock {
+  display: inline-block; margin-left: 6px; padding: 0 5px; vertical-align: 1px;
+  font-size: 9px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+  color: #5b6b66; background: #eef3f1; border: 1px solid #dde6e3; border-radius: 4px;
+  cursor: help;
+}
+.ls-head p .ss-lock { margin-left: 0; }
+.ss-grid th.ss-th-read { color: #7a8681; }
+.ss-ro {
+  display: block; min-width: 96px; padding: 6px 8px; font-size: 13px;
+  color: #4a5551; white-space: pre-wrap; word-break: break-word;
+}
+td.ss-read { background: #fbfcfc; }
+td.ss-shut .ss-ro { color: #8b968f; font-style: italic; }
+td.ss-shut { cursor: not-allowed; }
+
+/* The longest cells wrap rather than stretching the sheet off the screen. */
+.ss-grid td.ss-edit textarea.ls-cell { min-width: 200px; }
+.ss-grid td.ss-read .ss-ro { max-width: 320px; }
+
+.ss-check { width: 18px; height: 18px; margin: 0 8px; accent-color: #0f6e63; cursor: pointer; }
+
+/* A file or image column: one file, in the cell. */
+td.ss-file { min-width: 150px; }
+.ss-chip {
+  display: flex; align-items: center; gap: 6px; max-width: 240px; padding: 3px 6px;
+  font-size: 12.5px; background: #f6f8fb; border: 1px solid #e3e8ef; border-radius: 6px;
+}
+.ss-chip img { width: 30px; height: 26px; object-fit: cover; border-radius: 4px; flex: none; }
+.ss-chip a { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+             color: #1d4ed8; text-decoration: none; }
+.ss-chip a:hover { text-decoration: underline; }
+.ls-imgs figure a { display: block; width: 100%; height: 100%; }
+.ls-imgadd.busy { opacity: .6; pointer-events: none; }
+
+/* Live cues: a cell in flight, a cell the team just changed, a new row. */
+td.ss-saving { opacity: .6; }
+td.ss-flash { animation: ss-flash 1.4s ease-out; }
+@keyframes ss-flash { from { background: #fff6cf; } to { background: transparent; } }
+tr.ss-new td { animation: ss-new 1.6s ease-out; }
+@keyframes ss-new { from { background: #e4f4f1; } to { background: transparent; } }
+
+/* A row the team added, on a sheet shared to see every row. */
+.ss-team { color: #b5c0bc; font-size: 18px; cursor: help; }
+tr.ss-theirs .ls-num { box-shadow: inset 3px 0 0 #c9d8d3; }
+
+.ss-sync { display: inline-block; margin-left: 6px; color: #6f7a76; }
+
+/* What just happened, briefly, at the foot of the screen. */
+.ss-toast {
+  position: fixed; left: 50%; bottom: 22px; z-index: 50; max-width: min(560px, calc(100vw - 32px));
+  padding: 10px 16px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
+  color: #fff; background: #16201d; border-radius: 9px; font-size: 13.5px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .18); transition: opacity .2s, transform .2s;
+}
+.ss-toast.show { opacity: 1; transform: translate(-50%, 0); }
+.ss-toast.bad { background: #8a2b2b; }
+
+@media (max-width: 720px) {
+  .ls-baract { width: 100%; justify-content: space-between; }
+}

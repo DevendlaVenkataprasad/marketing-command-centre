@@ -1,0 +1,153 @@
+/* ------------------------------------------------------------------ *
+ * The public form.
+ *
+ * This is the one page in the portal seen by people who have no account,
+ * no training and no second attempt — a centre head filling in a design
+ * requisition on a phone. So it is wider-spaced and plainer than the admin
+ * screens: one column of questions on a phone, two where there is room,
+ * and nothing on it that cannot be answered without asking somebody.
+ * ------------------------------------------------------------------ */
+
+.fm-body {
+  margin: 0; background: #eef2f1; color: #16201d;
+  font: 15px/1.6 system-ui, "Segoe UI", Roboto, sans-serif;
+}
+
+.fm-top {
+  padding: 14px 20px; background: #fff; border-bottom: 1px solid #dde6e3;
+}
+.fm-top .brandmark {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 14px; font-weight: 750;
+}
+.fm-top .brandmark span span { color: #8b968f; font-weight: 400; }
+.fm-top .brandlogo {
+  width: 32px; height: 32px; flex: 0 0 auto;
+  object-fit: contain; border-radius: 6px;
+}
+
+.fm-wrap { max-width: 880px; margin: 0 auto; padding: 22px 16px 60px; }
+.fm-card {
+  padding: 30px 32px 28px; background: #fff;
+  border: 1px solid #dde6e3; border-radius: 12px;
+}
+
+/* ------------------------------------------------------------ heading */
+.fm-head { padding-bottom: 18px; margin-bottom: 20px; border-bottom: 2px solid #0f6e63; }
+.fm-eyebrow {
+  color: #0f6e63; font-size: 10.5px; font-weight: 800;
+  letter-spacing: .1em; text-transform: uppercase;
+}
+.fm-head h1 { margin: 6px 0 8px; font-size: 24px; font-weight: 800; line-height: 1.25; }
+.fm-lead { margin: 0; max-width: 60ch; color: #4a5551; font-size: 14px; }
+
+.fm-secttl { margin: 0 0 4px; font-size: 15px; font-weight: 750; }
+.fm-hint { margin: 0 0 18px; color: #8b968f; font-size: 12.5px; line-height: 1.6; }
+.fm-foot { margin: 14px 0 0; }
+.fm-sig { margin: 18px 0 0; text-align: center; color: #8b968f; font-size: 11.5px; }
+
+/* ------------------------------------------------------------- fields */
+/* Two columns where there is room, one on a phone. A long answer always
+   takes the full width: a paragraph in a half-width box is unreadable. */
+.fm-card .formgrid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px 20px;
+}
+.fm-card .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.fm-card .field.full { grid-column: 1 / -1; }
+.fm-card .field label {
+  font-size: 11.5px; font-weight: 800; letter-spacing: .03em;
+  text-transform: uppercase; color: #667069;
+}
+.fm-card .field .req { margin-left: 4px; color: #b4232c; }
+.fm-card .field input,
+.fm-card .field select,
+.fm-card .field textarea {
+  font: inherit; font-size: 15px; padding: 11px 12px; width: 100%;
+  color: #16201d; background: #fff; border: 1px solid #cfdad6; border-radius: 8px;
+}
+.fm-card .field textarea { resize: vertical; min-height: 92px; line-height: 1.55; }
+.fm-card .field input:focus,
+.fm-card .field select:focus,
+.fm-card .field textarea:focus {
+  border-color: #0f6e63; outline: 2px solid rgba(15, 110, 99, .16); outline-offset: 0;
+}
+/* A required field that the browser has rejected says so where it happened,
+   not in a summary at the top that scrolls away. */
+.fm-card .field input:invalid:not(:placeholder-shown),
+.fm-card .field input:user-invalid { border-color: #b4232c; }
+.fm-card .field.needed label { color: #16201d; }
+.fm-help { color: #8b968f; font-size: 11.5px; line-height: 1.45; }
+
+/* ------------------------------------------------------------ actions */
+.fm-actions {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  padding-top: 18px; margin-top: 22px; border-top: 1px solid #e7efec;
+}
+.fm-actions .btn { padding: 11px 20px; font-size: 14.5px; }
+.fm-actions .btn-primary { min-width: 160px; justify-content: center; }
+
+/* ------------------------------------------------------ the thank-you */
+/* What somebody outside the portal is left looking at, so it carries the
+   reference and the date rather than only the word "saved". */
+.fm-done { text-align: center; padding: 8px 0 4px; }
+.fm-tick {
+  width: 52px; height: 52px; margin: 0 auto 14px; display: flex;
+  align-items: center; justify-content: center; border-radius: 50%;
+  color: #fff; background: #0f6e63; font-size: 26px; line-height: 1;
+}
+.fm-done h2 { margin: 0 0 6px; font-size: 21px; font-weight: 800; }
+.fm-donelead { margin: 0 auto 20px; max-width: 52ch; color: #4a5551; font-size: 14px; }
+
+.fm-refs {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px; margin-bottom: 18px; text-align: left;
+}
+.fm-ref {
+  padding: 13px 15px; background: #fafcfb;
+  border: 1px solid #e3ebe8; border-radius: 10px;
+}
+.fm-ref.accent { background: #e9f5f2; border-color: #bfe0da; }
+.fm-ref span {
+  display: block; color: #8b968f; font-size: 9.5px; font-weight: 800;
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.fm-ref strong {
+  display: block; margin-top: 4px; font-size: 18px; font-weight: 750;
+  overflow-wrap: anywhere;
+}
+.fm-ref small { display: block; margin-top: 3px; color: #8b968f; font-size: 11.5px; }
+
+.fm-note {
+  padding: 12px 15px; margin-bottom: 18px; border-radius: 9px;
+  font-size: 13px; line-height: 1.6; text-align: left;
+}
+.fm-note.good { color: #147348; background: #e8f8f0; border: 1px solid #bfe6cf; }
+.fm-note.warn { color: #8a6d1f; background: #fdf6e3; border: 1px solid #ecdcb0; }
+
+.fm-after { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+
+/* ------------------------------------------------------------- phones */
+@media (max-width: 640px) {
+  .fm-wrap { padding: 14px 12px 40px; }
+  .fm-card { padding: 22px 18px 20px; border-radius: 10px; }
+  .fm-head h1 { font-size: 20px; }
+  .fm-actions .btn { flex: 1 1 100%; justify-content: center; }
+}
+
+/* The file picker sits at the foot of the questions, not among them: it is
+   the one control that takes more than a moment to use. */
+.fm-files {
+  display: flex; flex-direction: column; gap: 7px;
+  padding: 16px 18px; margin-top: 18px; background: #fafcfb;
+  border: 1px dashed #cfdad6; border-radius: 10px;
+}
+.fm-files label {
+  font-size: 11.5px; font-weight: 800; letter-spacing: .03em;
+  text-transform: uppercase; color: #667069;
+}
+.fm-files input[type=file] { font: inherit; font-size: 14px; }
+
+/* A yes / no column on a form. */
+.fm-check { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; padding: 8px 0; cursor: pointer; }
+.fm-check input { width: 18px; height: 18px; }

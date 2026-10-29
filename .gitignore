@@ -1,0 +1,6 @@
+config.local.php
+config.db.php
+uploads/
+*.log
+certs/
+media/

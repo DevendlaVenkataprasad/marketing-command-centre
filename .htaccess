@@ -1,0 +1,78 @@
+# Marketing Command Centre — Apache rules for shared hosting (Hostinger).
+#
+# Nothing here names the site's own domain: the HTTPS rule below reuses
+# %{HTTP_HOST}, so these rules follow the portal to any subdomain.
+
+# Never serve the source of a PHP-adjacent secret or data file -- nor a
+# backup, archive or editor copy left lying around, nor the setup switch.
+<FilesMatch "^(config\.local\.php|config\.db\.php|setup\.enable|\.gitignore|\.env.*|composer\.(json|lock)|.*\.md|.*\.sql|.*\.log|.*\.(bak|old|orig|save|swp|tmp|zip|tar|gz|tgz|7z|rar)|.*~)$">
+    Require all denied
+</FilesMatch>
+
+# The library, database scripts and certificates are never fetched directly.
+# (Each of those folders also carries its own deny rule, which holds wherever
+# the portal is installed; this one only matches an install at the web root.)
+RedirectMatch 404 ^/(lib|database|certs|tests)(/|$)
+RedirectMatch 404 /\.(git|svn|hg)(/|$)
+
+# Uploaded files are only ever served through download.php.
+RedirectMatch 404 ^/uploads(/|$)
+
+# Directory listings off.
+Options -Indexes
+
+# Long-lived caching for the two static assets; everything else is dynamic.
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css        "access plus 7 days"
+    ExpiresByType application/javascript "access plus 7 days"
+</IfModule>
+
+# Sensible security headers.
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "same-origin"
+    # Browsers remember to use HTTPS only, so a password is never sent in clear.
+    Header always set Strict-Transport-Security "max-age=31536000"
+    # Only the portal may frame its pages; no plugins; no rewriting of the base URL.
+    # (Deliberately does not restrict scripts: the pages use inline scripts.)
+    Header always set Content-Security-Policy "frame-ancestors 'self'; object-src 'none'; base-uri 'self'"
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+    # The one exception: the co-working application form is made to be embedded
+    # on the organisation's own website, so any site may frame that page alone.
+    <Files "coworking-apply.php">
+        Header always unset X-Frame-Options
+        Header always set Content-Security-Policy "frame-ancestors *; object-src 'none'; base-uri 'self'"
+    </Files>
+</IfModule>
+
+# Pages that belong to one person or one department are never cached by the
+# host (LiteSpeed) or a CDN. A department's live sheet carries its own link
+# inside the page; a cached copy served to a second department showed them
+# the first one's sheet and saved their work there.
+<IfModule LiteSpeed>
+    RewriteEngine On
+    RewriteRule ^(d\.php|c\.php|form\.php|download\.php|rsvp\.php|hr\.php|admin/hr\.php|incubation\.php|incubation-apply\.php|coworking-apply\.php|interview-panel\.php|ceo-approval\.php|offer-letter\.php|certificate\.php|admin/incubation\.php|api/.*)$ - [E=Cache-Control:no-cache]
+</IfModule>
+<IfModule mod_headers.c>
+    # Not download.php: it says itself what may be kept (a picture, by this
+    # browser only), and a header set here would overrule it.
+    <FilesMatch "^(d|c|form|rsvp|hr|incubation|incubation-apply|coworking-apply|interview-panel|ceo-approval|offer-letter|certificate)\.php$">
+        Header always set Cache-Control "no-store, no-cache, must-revalidate, max-age=0, private"
+    </FilesMatch>
+</IfModule>
+
+# Force HTTPS so passwords are never sent in the clear.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+</IfModule>
+
+# PHP limits for file uploads (25 MB in the app).
+<IfModule mod_php.c>
+    php_value upload_max_filesize 32M
+    php_value post_max_size 34M
+</IfModule>

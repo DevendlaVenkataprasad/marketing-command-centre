@@ -75,7 +75,7 @@ $versions = inc_all('SELECT v.*, (SELECT COUNT(*) FROM inc_applications a WHERE 
 $working = $draft ?: $pub;
 $fields = $working ? inc_form_fields((int) $working['id']) : [];
 // A client organisation's form names it (o=), so the page opens their forms, not ours.
-$publicUrl = rtrim(fabo_portal_url(), '/') . '/incubation-apply.php?f=' . $form['public_token']
+$publicUrl = rtrim(fabo_portal_url(), '/') . '/' . (inc_kind() === 'eo' ? 'event-apply.php' : 'incubation-apply.php') . '?f=' . $form['public_token']
            . (inc_org() > 0 ? '&o=' . inc_org() : '');
 
 inc_layout_start($form['name'], e(inc_purpose_text($form['purpose'], $form['event_name'] ?? null)) . ' · ' . ($pub ? 'published v' . (int) $pub['version_no'] : 'not published') . ($draft ? ' · draft v' . (int) $draft['version_no'] : ''),
@@ -209,7 +209,7 @@ echo '<section class="card fb-settings">' . inc_form_open() . '<input type="hidd
    . inc_field('Description for applicants', inc_textarea('description', (string) $form['description'], 3, 'placeholder="A line or two shown above the questions"'))
    . '</div>'
    . '<div class="fb-group"><h3>Where applications go</h3>'
-   . inc_field('Assign to team', inc_select('dept_team_id', inc_teams(true), $form['dept_team_id'] ?? null, 'None'),
+   . inc_field('Assign to team', inc_select('dept_team_id', inc_team_picker(), $form['dept_team_id'] ?? null, 'None'),
                'Applications always land in the main pipeline. With a team chosen, each one is also put on that team’s Department desk and tagged with its name on the board. Choosing a team here also sends it the applications already received.')
    . inc_field('Applicants are', inc_select('default_type_id', inc_masters('applicant_type'), $form['default_type_id'] ?? null, 'Not set'), 'Recorded as the applicant type (Student, Startup, Mentor…) on each application from this form.')
    . inc_field('Default source', inc_select('default_source_id', inc_masters('source'), $form['default_source_id'], 'None'), 'Recorded on each application from this form.')

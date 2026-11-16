@@ -10,7 +10,8 @@
  */
 
 require_once __DIR__ . '/../depts.php';
-$myDepts = inc_my_depts();
+// Departments file their own; mentors and a jury are given theirs by the owner only.
+$myDepts = array_filter(inc_my_depts(), static fn($n, $t) => inc_dept_may_intake((int) $t), ARRAY_FILTER_USE_BOTH);
 $deptId = (int) ($_GET['dept'] ?? 0);
 if (!isset($myDepts[$deptId])) {
     $deptId = 0;

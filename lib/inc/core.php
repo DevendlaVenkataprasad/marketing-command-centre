@@ -36,8 +36,8 @@ function inc_start(array $viewer, ?int $org = null): void
     $GLOBALS['inc_ctx'] = [
         'viewer'   => $viewer,
         'is_admin' => !empty($viewer['is_admin']),
-        'grant'    => inc_grant($viewer),
-        'desk'     => inc_desk_member($viewer),
+        'grant'    => inc_grant($viewer, inc_grant_key()),
+        'desk'     => inc_desk_member($viewer, inc_kind()),
         'actor'    => !empty($viewer['is_admin']) ? 'Administrator' : (string) ($viewer['client']['name'] ?? 'unknown'),
     ];
 }
@@ -273,7 +273,7 @@ function inc_master_name(?int $id): string
         return '';
     }
     static $byOrg = [];
-    $all = &$byOrg[inc_org()];
+    $all = &$byOrg[inc_scope_key()];
     if ($all === null) {
         $all = [];
         foreach (inc_all('SELECT id, name FROM inc_masters') as $r) {
@@ -480,7 +480,7 @@ function inc_event_names(): array
 function inc_dev_stages(bool $activeOnly = false): array
 {
     static $byOrg = [];
-    $rows = &$byOrg[inc_org()];
+    $rows = &$byOrg[inc_scope_key()];
     if ($rows === null) {
         $rows = inc_all('SELECT * FROM inc_dev_stages ORDER BY sort');
     }
@@ -707,7 +707,7 @@ function inc_stage_move(int $id, int $dir): void
 function inc_people(): array
 {
     static $byOrg = [];
-    $out = &$byOrg[inc_org()];
+    $out = &$byOrg[inc_scope_key()];
     if ($out === null) {
         $out = [];
         foreach (inc_all('SELECT c.id, c.name FROM clients c WHERE ' . inc_people_cond('c')
@@ -805,25 +805,30 @@ function inc_team_save(?int $id, array $in): int
     $name = inc_str($in['name'] ?? '', 120, true, 'Department name');
     $desc = inc_str($in['description'] ?? '', 255);
     $active = !empty($in['active']) ? 1 : 0;
+    // Department, mentor panel or jury (lib/inc/depts.php inc_dept_kinds()); only the owner gets here (configure).
+    $kind = (string) ($in['kind'] ?? 'department');
+    if (!isset(inc_dept_kinds()[$kind])) {
+        throw new InvalidArgumentException('Choose whether it is a department, mentors or a jury.');
+    }
     if (inc_one('SELECT id FROM inc_teams WHERE name = ? AND id <> ?', 'si', [$name, (int) $id])) {
         throw new InvalidArgumentException('Another department is already called "' . $name . '".');
     }
     $spokes = array_values(array_intersect(array_map('intval', (array) ($in['spokes'] ?? [])), array_keys(inc_masters('spoke', false))));
-    return inc_tx(static function () use ($id, $name, $desc, $active, $spokes) {
+    return inc_tx(static function () use ($id, $name, $desc, $active, $spokes, $kind) {
         $before = $id ? inc_team($id) : null;
         if ($id) {
             if (!$before) {
                 throw new InvalidArgumentException('That team no longer exists.');
             }
-            inc_exec('UPDATE inc_teams SET name = ?, description = ?, active = ? WHERE id = ?', 'ssii', [$name, $desc, $active, $id]);
+            inc_exec('UPDATE inc_teams SET name = ?, description = ?, kind = ?, active = ? WHERE id = ?', 'sssii', [$name, $desc, $kind, $active, $id]);
         } else {
-            $id = inc_exec('INSERT INTO inc_teams (name, description, active) VALUES (?,?,?)', 'ssi', [$name, $desc, $active]);
+            $id = inc_exec('INSERT INTO inc_teams (name, description, kind, active) VALUES (?,?,?,?)', 'sssi', [$name, $desc, $kind, $active]);
         }
         inc_exec('DELETE FROM inc_team_spokes WHERE team_id = ?', 'i', [$id]);
         foreach ($spokes as $s) {
             inc_exec('INSERT INTO inc_team_spokes (team_id, spoke_id) VALUES (?,?)', 'ii', [$id, $s]);
         }
-        inc_audit($before ? 'update' : 'create', 'team', $id, $name, $before, ['name' => $name, 'active' => $active, 'spokes' => $spokes]);
+        inc_audit($before ? 'update' : 'create', 'team', $id, $name, $before, ['name' => $name, 'kind' => $kind, 'active' => $active, 'spokes' => $spokes]);
         return $id;
     });
 }
@@ -930,11 +935,32 @@ function inc_fill(string $tpl, array $vars): string
     return preg_replace_callback('/\{([a-z_]+)\}/', static fn($m) => array_key_exists($m[1], $vars) ? (string) $vars[$m[1]] : $m[0], $tpl);
 }
 
+/**
+ * The product's own name for itself, in anything shown or sent. Whole phrases
+ * only, never the bare word: an event may well be called "Incubation Bootcamp".
+ */
+function inc_words(string $text): string
+{
+    if (inc_kind() !== 'eo') {
+        return $text;
+    }
+    return strtr($text, [
+        'Incubation Management' => 'Event Organizers', 'Incubation Overview' => 'Event Organizers',
+        'Incubation settings' => 'Organizer settings', 'Incubation applications' => 'Event applications',
+        'The incubation team' => 'The organizers team', 'the incubation team' => 'the organizers team',
+        'incubation teams' => 'organizers teams', 'incubation team' => 'organizers team',
+        'Incubation team' => 'Organizers team', 'Incubation assignment' => 'Event assignment',
+        'Incubation reassignment' => 'Event reassignment', 'Their incubation work' => 'Their event work',
+        'Department desk' => 'Organizers desk',
+    ]);
+}
+
 /** Where a notice should link. Only the administrator can open the module, so only they get a link. */
 function inc_admin_link(string $page, array $q = []): string
 {
     // A client organisation's head opens their Incubation Management at the root, not under admin/.
-    return (inc_org() > 0 ? 'incubation.php?' : 'admin/incubation.php?') . http_build_query(['p' => $page] + $q);
+    $file = inc_kind() === 'eo' ? 'organizers.php?' : 'incubation.php?';
+    return (inc_org() > 0 ? $file : 'admin/' . $file) . http_build_query(['p' => $page] + $q);
 }
 
 /**
@@ -952,8 +978,8 @@ function inc_admin_link(string $page, array $q = []): string
 function inc_notify(string $event, string $eventKey, int $recipientId, array $vars, ?int $appId = null, ?int $wsId = null, string $adminLink = '', string $personLink = ''): array
 {
     $tpl = inc_mail_template($event);
-    $subject = mb_substr(inc_fill($tpl['subject'], $vars), 0, 255);
-    $body = inc_fill($tpl['body'], $vars);
+    $subject = mb_substr(inc_words(inc_fill($tpl['subject'], $vars)), 0, 255);
+    $body = inc_words(inc_fill($tpl['body'], $vars));
     $key = mb_substr($event . ':' . $eventKey . ':' . $recipientId, 0, 120);
     $out = ['portal' => 'skipped', 'email' => 'skipped'];
     // Recipient 0 is whoever runs this Incubation Management: the administrator for

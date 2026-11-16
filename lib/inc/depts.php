@@ -28,6 +28,67 @@
  */
 
 require_once __DIR__ . '/apps.php';
+require_once __DIR__ . '/gems.php';
+
+/**
+ * What a department can be (inc_teams.kind). Mentors and a jury are made,
+ * stored and worked exactly like a department -- the same tables, people from
+ * the same team, their own stages and Gem stages -- but each kind has a desk
+ * of its own, and only the owner hands them applications: they do not add
+ * their own as a department may. key => [one, many, desk title, what it does].
+ */
+function inc_dept_kinds(): array
+{
+    return [
+        'department' => ['Department', 'Departments', 'Department desk', 'Works applications in its own stages and returns them to the incubation team.'],
+        'mentor'     => ['Mentor', 'Mentors', 'Mentor desk', 'Mentors the startups the owner assigns, and returns each with mentoring remarks.'],
+        'jury'       => ['Jury', 'Jury', 'Jury desk', 'Judges the applications the owner assigns, and returns each with a verdict.'],
+    ];
+}
+
+/** A team row's kind, 'department' for an older row or an unknown value. */
+function inc_dept_kind_of(?array $team): string
+{
+    $k = (string) ($team['kind'] ?? 'department');
+    return isset(inc_dept_kinds()[$k]) ? $k : 'department';
+}
+
+/** Active teams of one kind (or every kind), id => name. */
+function inc_teams_of_kind(?string $kind = null, bool $activeOnly = true): array
+{
+    $out = [];
+    foreach (inc_all('SELECT id, name, kind FROM inc_teams' . ($activeOnly ? ' WHERE active = 1' : '') . ' ORDER BY name') as $r) {
+        if ($kind === null || inc_dept_kind_of($r) === $kind) {
+            $out[(int) $r['id']] = $r['name'];
+        }
+    }
+    return $out;
+}
+
+/** id => kind of every team, for grouping pickers. */
+function inc_team_kinds(): array
+{
+    static $by = [];
+    $out = &$by[inc_scope_key()];
+    if ($out === null) {
+        $out = [];
+        foreach (inc_all('SELECT id, kind FROM inc_teams') as $r) {
+            $out[(int) $r['id']] = inc_dept_kind_of($r);
+        }
+    }
+    return $out;
+}
+
+/** Departments, mentors and jury, grouped for a picker: kind => [id => name], only kinds that have one. */
+function inc_teams_grouped(bool $activeOnly = true): array
+{
+    $out = [];
+    $kinds = inc_team_kinds();
+    foreach (inc_teams($activeOnly) as $id => $name) {
+        $out[$kinds[$id] ?? 'department'][$id] = $name;
+    }
+    return array_intersect_key(array_replace(array_fill_keys(array_keys(inc_dept_kinds()), []), $out), $out);
+}
 
 function inc_dept_default_stages(): array
 {
@@ -41,18 +102,46 @@ function inc_me(): int
     return !empty($v['is_admin']) ? 0 : (int) ($v['client']['id'] ?? 0);
 }
 
-/** Active departments, id => name: all of them for whoever runs the CRM, else the person's own. */
-function inc_my_depts(): array
+/**
+ * Active departments, id => name: all of them for whoever runs the CRM, else
+ * the person's own. $kind narrows it to departments, mentors or jury.
+ */
+function inc_my_depts(?string $kind = null): array
 {
     $out = [];
     if (inc_can('view')) {
-        return inc_teams(true);
+        return inc_teams_of_kind($kind);
     }
-    foreach (inc_all('SELECT DISTINCT t.id, t.name FROM inc_teams t JOIN inc_team_members m ON m.team_id = t.id
+    foreach (inc_all('SELECT DISTINCT t.id, t.name, t.kind FROM inc_teams t JOIN inc_team_members m ON m.team_id = t.id
                        WHERE t.active = 1 AND m.person_id = ? ORDER BY t.name', 'i', [inc_me()]) as $r) {
-        $out[(int) $r['id']] = $r['name'];
+        if ($kind === null || inc_dept_kind_of($r) === $kind) {
+            $out[(int) $r['id']] = $r['name'];
+        }
     }
     return $out;
+}
+
+/** The kinds the viewer has a desk for, in order: kind => [id => name]. */
+function inc_my_desk_kinds(): array
+{
+    $out = [];
+    $kinds = inc_team_kinds();
+    foreach (inc_my_depts() as $id => $name) {
+        $out[$kinds[$id] ?? 'department'][$id] = $name;
+    }
+    return array_intersect_key(array_replace(array_fill_keys(array_keys(inc_dept_kinds()), []), $out), $out);
+}
+
+/**
+ * May the viewer file a new application for this desk? A department's own
+ * members may; mentors and a jury are given theirs by the owner only.
+ */
+function inc_dept_may_intake(int $teamId): bool
+{
+    if (!inc_dept_may_work($teamId)) {
+        return false;
+    }
+    return inc_can('edit') || inc_dept_kind_of(inc_team($teamId)) === 'department';
 }
 
 /** May the viewer work this department's desk? Its members, and whoever assigns work. */
@@ -124,18 +213,38 @@ function inc_dept_stages(int $teamId): array
     return inc_all('SELECT * FROM inc_dept_stages WHERE team_id = ? ORDER BY sort, id', 'i', [$teamId]);
 }
 
-function inc_dept_stage_save(int $teamId, ?int $id, string $name, bool $final): void
+/** The Gems whose scores a department stage shows (its "Gem stage" ticks). */
+function inc_dept_stage_gem_ids(?array $stage): array
+{
+    return inc_stage_gem_ids($stage);
+}
+
+/**
+ * Saves a department stage. $gemIds (null: leave as it is) are the Gems whose
+ * scores it shows -- a Gem stage, chosen by the department itself on its
+ * board, just as the main pipeline's stages are.
+ */
+function inc_dept_stage_save(int $teamId, ?int $id, string $name, bool $final, ?array $gemIds = null): void
 {
     inc_dept_need($teamId);
     $name = inc_str($name, 80, true, 'Stage name');
+    $gems = null;
+    if ($gemIds !== null) {
+        require_once __DIR__ . '/gems.php';
+        $ids = array_values(array_intersect(array_map('intval', $gemIds), array_keys(inc_gems())));
+        $gems = $ids ? implode(',', $ids) : null;
+    }
     if (inc_one('SELECT id FROM inc_dept_stages WHERE team_id = ? AND name = ? AND id <> ?', 'isi', [$teamId, $name, (int) $id])) {
         throw new InvalidArgumentException('This department already has a stage called "' . $name . '".');
     }
     if ($id) {
         inc_exec('UPDATE inc_dept_stages SET name = ?, is_final = ? WHERE id = ? AND team_id = ?', 'siii', [$name, $final ? 1 : 0, $id, $teamId]);
+        if ($gemIds !== null) {
+            inc_exec('UPDATE inc_dept_stages SET gem_ids = ? WHERE id = ? AND team_id = ?', 'sii', [$gems, $id, $teamId]);
+        }
     } else {
         $sort = (int) (inc_one('SELECT MAX(sort) m FROM inc_dept_stages WHERE team_id = ?', 'i', [$teamId])['m'] ?? 0);
-        inc_exec('INSERT INTO inc_dept_stages (team_id, name, sort, is_final) VALUES (?,?,?,?)', 'isii', [$teamId, $name, $sort + 1, $final ? 1 : 0]);
+        inc_exec('INSERT INTO inc_dept_stages (team_id, name, sort, is_final, gem_ids) VALUES (?,?,?,?,?)', 'isiis', [$teamId, $name, $sort + 1, $final ? 1 : 0, $gems]);
     }
     inc_audit('dept_stage', 'team', $teamId, $name);
 }
@@ -532,4 +641,255 @@ function inc_dept_take_new(int $teamId, int $appId): int
         $aid = (int) (inc_one('SELECT id FROM inc_dept_assignments WHERE application_id = ? AND team_id = ?', 'ii', [$appId, $teamId])['id'] ?? 0);
     }
     return $aid;
+}
+
+/* ------------------------------------------------- Gems on a desk */
+
+/**
+ * A desk emails a Gem's form to applicants it holds (one opened, or the ones
+ * ticked). The same personal link and request as the incubation team's: an
+ * applicant answers a Gem once, whoever sent it.
+ */
+function inc_dept_gem_send(int $teamId, int $gemId, array $assignIds): array
+{
+    $team = inc_dept_need($teamId);
+    $ids = array_values(array_unique(array_filter(array_map('intval', $assignIds))));
+    if (!$ids) {
+        throw new InvalidArgumentException('Choose at least one application.');
+    }
+    if (count($ids) > 500) {
+        throw new InvalidArgumentException('Email a Gem form to up to 500 applications at a time.');
+    }
+    $gem = inc_gem($gemId);
+    if (!$gem || (int) $gem['active'] !== 1) {
+        throw new InvalidArgumentException('Choose an active Gem.');
+    }
+    $apps = array_map('intval', array_column(inc_all('SELECT application_id FROM inc_dept_assignments WHERE team_id = ? AND id IN (' . implode(',', $ids) . ')',
+                                                     'i', [$teamId]), 'application_id'));
+    $out = ['sent' => 0, 'queued' => 0, 'skipped' => [], 'failed' => []];
+    foreach ($apps as $appId) {
+        $app = inc_one('SELECT * FROM inc_applications WHERE id = ?', 'i', [$appId]);
+        if (!$app) {
+            continue;
+        }
+        $ref = (string) ($app['ref'] ?: '#' . $appId);
+        [$status, $detail] = inc_gem_deliver($gem, $app, (string) $gem['mail_subject'], (string) $gem['mail_body'], 'sent by ' . $team['name'] . ' (' . inc_actor() . ')');
+        if ($status === 'sent' || $status === 'queued') {
+            $out[$status]++;
+        } elseif ($status === 'skipped') {
+            $out['skipped'][$ref] = $detail;
+        } else {
+            $out['failed'][$ref] = $detail ?: $status;
+        }
+    }
+    inc_audit('dept_gem_send', 'team', $teamId, $gem['name'] . ': ' . count($apps) . ' application(s)');
+    return $out;
+}
+
+/** A desk asks Gemini to score (again) the answers to a Gem, for an application it holds. */
+function inc_dept_gem_score(int $assignId, int $gemId): array
+{
+    $d = inc_dept_assignment_need($assignId);
+    $req = inc_gem_requests_for_app((int) $d['application_id'])[$gemId] ?? null;
+    return $req ? inc_gem_score((int) $req['id']) : [false, 'Nothing to score yet.'];
+}
+
+/**
+ * Gem scores beside a desk's cards and rows: assignment id => [[gem, score], ...],
+ * only where the department stage the application is at shows that Gem.
+ */
+function inc_dept_gem_scores(array $rows, array $stages): array
+{
+    $show = [];
+    foreach ($stages as $s) {
+        $show[(int) $s['id']] = inc_dept_stage_gem_ids($s);
+    }
+    $first = (int) ($stages[0]['id'] ?? 0);
+    $apps = [];
+    foreach ($rows as $r) {
+        $st = (int) ($r['stage_id'] ?? 0);
+        $gids = $show[isset($show[$st]) ? $st : $first] ?? [];
+        if ($gids) {
+            $apps[(int) $r['application_id']][] = [(int) $r['id'], $gids];
+        }
+    }
+    if (!$apps) {
+        return [];
+    }
+    $gems = inc_gems();
+    $out = [];
+    foreach (inc_all('SELECT application_id, gem_id, score FROM inc_gem_requests WHERE score IS NOT NULL AND application_id IN (' . implode(',', array_keys($apps)) . ')') as $q) {
+        foreach ($apps[(int) $q['application_id']] as [$aid, $gids]) {
+            if (isset($gems[(int) $q['gem_id']]) && in_array((int) $q['gem_id'], $gids, true)) {
+                $out[$aid][] = [$gems[(int) $q['gem_id']], (float) $q['score']];
+            }
+        }
+    }
+    return $out;
+}
+
+/**
+ * The Gem section of an application opened on a desk: what was sent and
+ * answered always; the score, its reasons and what to improve only while the
+ * application sits at one of the department's Gem stages. The desk may email
+ * the form and ask for a score itself.
+ */
+function inc_dept_gem_html(array $app, array $assign, array $stages): string
+{
+    $gems = inc_gems(true);
+    if (!$gems) {
+        return '';
+    }
+    $stage = null;
+    foreach ($stages as $s) {
+        if ((int) $s['id'] === (int) $assign['stage_id']) {
+            $stage = $s;
+        }
+    }
+    $stage = $stage ?? ($stages[0] ?? null);
+    $on = inc_dept_stage_gem_ids($stage);
+    $reqs = inc_gem_requests_for_app((int) $app['id']);
+    $h = '';
+    foreach ($gems as $gid => $gem) {
+        $r = $reqs[$gid] ?? null;
+        $visible = in_array($gid, $on, true);
+        $where = array_values(array_map(static fn($s) => $s['name'], array_filter($stages, static fn($s) => in_array($gid, inc_dept_stage_gem_ids($s), true))));
+        // A Gem nobody sent and no stage of this desk shows: nothing to say about it.
+        if ((!$r || !$r['sent_at'] && !$r['submitted_at']) && !$where) {
+            continue;
+        }
+        $h .= '<div class="inc-gem dk-gem"><h4>' . e($gem['name']) . ($visible ? ' ' . inc_badge('Gem stage', 'blue') : '') . '</h4>';
+        if (!$r || !$r['sent_at'] && !$r['submitted_at']) {
+            $h .= '<p class="muted small">Not sent to this applicant yet.</p>';
+        } elseif (!$r['submitted_at']) {
+            $h .= '<p class="small">Form emailed to ' . e((string) $r['email']) . ' on ' . e(inc_fmt_datetime($r['sent_at'])) . ' · ' . inc_badge('Awaiting answers', 'amber') . '</p>';
+        } else {
+            if ($visible && $r['score'] !== null) {
+                $h .= '<div class="inc-gem-total">' . inc_gem_score_html($gem, (float) $r['score']) . '<span class="muted small">scored ' . e(inc_fmt_datetime($r['scored_at'])) . '</span></div>';
+                if (trim((string) $r['summary']) !== '') {
+                    $h .= '<p class="small">' . nl2br(e($r['summary'])) . '</p>';
+                }
+                $h .= '<table class="data inc-gem-table"><thead><tr><th>Criterion</th><th class="num">Score</th><th>Why</th></tr></thead><tbody>';
+                foreach (json_decode((string) $r['breakdown_json'], true) ?: [] as $b) {
+                    $w = $b['max'] > 0 ? (int) round($b['score'] * 100 / $b['max']) : 0;
+                    $h .= '<tr><td><strong>' . e($b['name']) . '</strong><div class="inc-mini-bar"><i style="width:' . $w . '%"></i></div></td>'
+                        . '<td class="num nowrap">' . e(rtrim(rtrim(number_format((float) $b['score'], 1), '0'), '.')) . ' / ' . e(rtrim(rtrim(number_format((float) $b['max'], 1), '0'), '.')) . '</td>'
+                        . '<td class="small">' . e((string) $b['reason']) . '</td></tr>';
+                }
+                $h .= '</tbody></table>';
+                if ($improve = inc_gem_improvements($r)) {
+                    $h .= '<div class="inc-gem-improve"><strong>What to improve in the idea</strong><ol>';
+                    foreach ($improve as $p) {
+                        $h .= '<li>' . e($p) . '</li>';
+                    }
+                    $h .= '</ol></div>';
+                }
+            } elseif ($visible) {
+                $h .= '<p class="small">' . inc_badge('Scoring', 'blue') . ' ' . e($r['score_error'] ? 'Last try: ' . $r['score_error'] : 'Gemini is scoring the answers; refresh in a minute.') . '</p>';
+            } else {
+                $h .= '<p class="muted small">Answered. The score shows at ' . ($where ? 'the ' . e(implode(', ', $where)) . ' stage' . (count($where) > 1 ? 's' : '')
+                                                                                 : 'a Gem stage: tick this Gem in a stage\'s ⋯ menu on the board') . '.</p>';
+            }
+            $h .= '<details class="inc-gem-answers"><summary>Answers · ' . e(inc_fmt_datetime($r['submitted_at'])) . '</summary>';
+            foreach (json_decode((string) $r['answers_json'], true) ?: [] as $a) {
+                $h .= '<h4>' . e((string) $a['label']) . '</h4><p>' . ((string) $a['value'] !== '' ? nl2br(e((string) $a['value'])) : '<span class="muted">No answer</span>') . '</p>';
+            }
+            $h .= '</details>';
+        }
+        $h .= '<div class="inc-row">';
+        if (!$r || !$r['submitted_at']) {
+            $h .= inc_button($r && $r['sent_at'] ? 'Send the form again' : 'Email the form', ['action' => 'gem_send', 'assign_id' => $assign['id'], 'gem_id' => $gid], 'btn btn-sm');
+        } elseif ($visible) {
+            $h .= inc_button($r['score'] !== null ? 'Score again' : 'Score now', ['action' => 'gem_score', 'assign_id' => $assign['id'], 'gem_id' => $gid], 'btn btn-sm',
+                             $r['score'] !== null ? 'Ask Gemini to score these answers again? The current score is replaced.' : '');
+        }
+        $h .= '</div></div>';
+    }
+    return $h;
+}
+
+/* ----------------------------------------- many applications at once */
+
+/**
+ * Hands many applications to departments, mentors or a jury in one go (the
+ * Applications board's bulk action). Each one is assigned as from its own
+ * Departments tab, but every member is told once, with the count, rather
+ * than once per application. Returns ['done' => n, 'already' => n].
+ */
+function inc_dept_assign_many(array $appIds, array $teamIds, string $note): array
+{
+    inc_need('assign');
+    $active = inc_teams(true);
+    $teamIds = array_values(array_unique(array_filter(array_map('intval', $teamIds), static fn($t) => isset($active[$t]))));
+    if (!$teamIds) {
+        throw new InvalidArgumentException('Choose a department, mentor or jury.');
+    }
+    $note = inc_str($note, 2000);
+    $appIds = array_values(array_unique(array_filter(array_map('intval', $appIds))));
+    $got = array_fill_keys($teamIds, []);
+    $already = 0;
+    foreach ($appIds as $appId) {
+        if (!inc_app($appId)) {
+            continue;
+        }
+        inc_tx(static function () use ($appId, $teamIds, $note, &$got, &$already) {
+            $names = [];
+            foreach ($teamIds as $tid) {
+                $first = inc_dept_stages($tid)[0]['id'] ?? null;
+                $was = inc_one('SELECT * FROM inc_dept_assignments WHERE application_id = ? AND team_id = ?', 'ii', [$appId, $tid]);
+                if ($was && $was['state'] === 'open') {
+                    $already++;
+                    continue;
+                }
+                if ($was) {
+                    inc_exec('UPDATE inc_dept_assignments SET state = "open", stage_id = ?, note = ?, return_note = NULL, returned_by = NULL,
+                                     returned_at = NULL, assigned_by = ?, assigned_at = NOW() WHERE id = ?', 'issi',
+                             [$first, $note !== '' ? $note : null, inc_actor(), (int) $was['id']]);
+                } else {
+                    inc_exec('INSERT INTO inc_dept_assignments (application_id, team_id, stage_id, note, assigned_by) VALUES (?,?,?,?,?)',
+                             'iiiss', [$appId, $tid, $first, $note !== '' ? $note : null, inc_actor()]);
+                }
+                $got[$tid][] = $appId;
+                $names[] = inc_team_name($tid);
+            }
+            if ($names) {
+                inc_activity($appId, null, 'department', 'Assigned to ' . implode(', ', $names) . ($note !== '' ? ' — ' . mb_substr($note, 0, 200) : '') . '.');
+            }
+        });
+    }
+    $done = 0;
+    foreach ($got as $tid => $ids) {
+        if (!$ids) {
+            continue;
+        }
+        $done += count($ids);
+        $team = inc_team($tid);
+        inc_audit('dept_assign', 'team', $tid, count($ids) . ' application(s)');
+        $one = count($ids) === 1 ? inc_app($ids[0]) : null;
+        $vars = $one ? inc_dept_vars($one, $team, $note)
+                     : ['ref' => count($ids) . ' applications', 'startup' => count($ids) . ' applications', 'applicant' => count($ids) . ' applicants',
+                        'team' => $team['name'], 'note' => $note !== '' ? $note : '—', 'date' => inc_fmt_datetime(date('Y-m-d H:i:s')), 'owner' => inc_actor()];
+        foreach (array_keys(inc_dept_people($tid)) as $pid) {
+            inc_notify('dept_assigned', 'dab' . $tid . ':' . md5(implode(',', $ids)) . ':' . time(), $pid, $vars, $one ? (int) $one['id'] : null, null, '',
+                       inc_url('desk', ['dept' => $tid]));
+        }
+    }
+    return ['done' => $done, 'already' => $already];
+}
+
+/**
+ * Teams for a <select>: flat while there are only departments, grouped
+ * (Departments / Mentors / Jury) as soon as mentors or a jury exist.
+ */
+function inc_team_picker(bool $activeOnly = true): array
+{
+    $g = inc_teams_grouped($activeOnly);
+    if (count($g) <= 1) {
+        return $g ? reset($g) : [];
+    }
+    $out = [];
+    foreach ($g as $k => $list) {
+        $out[inc_dept_kinds()[$k][1]] = $list;
+    }
+    return $out;
 }

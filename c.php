@@ -119,6 +119,13 @@ if ($token === '' && !isset($_GET['sheet']) && !fabo_visible_sheets($viewer)) {
         header('Location: hr.php');
         exit;
     }
+    /* So does someone who only organizes events. Holding Incubation too, they keep
+       My Work, which carries its figures. */
+    require_once __DIR__ . '/lib/eo/nav.php';
+    if (inc_grant($viewer) === 'none' && !inc_desk_member($viewer) && (eo_grant($viewer) !== 'none' || eo_desk_member($viewer))) {
+        header('Location: organizers.php');
+        exit;
+    }
 }
 
 $sheets = fabo_visible_sheets($viewer);
@@ -230,11 +237,11 @@ function fabo_mywork_page(array $viewer): void
         $incDesks = fabo_signed_in() ? inc_desk_open_counts($viewer) : [];
         if ($incDesks): ?>
   <div class="block cmw">
-    <div class="cmw-head"><div><h2>Incubation applications for your department</h2>
-      <div class="hint">Applications the incubation team handed to your department. Work them in your stages and return them when done.</div></div></div>
+    <div class="cmw-head"><div><h2>Incubation applications for your department, mentoring or jury</h2>
+      <div class="hint">Applications the incubation team handed to your department, or assigned you as a mentor or juror. Work them in your stages and return them when done.</div></div></div>
     <ul class="cmw-list">
       <?php foreach ($incDesks as $tid => $d): ?>
-        <li class="cmw-item"><div class="cmw-main"><strong><?= e($d['name']) ?></strong>
+        <li class="cmw-item"><div class="cmw-main"><strong><?= e($d['name']) ?></strong><?php if (($d['kind'] ?? 'department') !== 'department'): ?> <span class="cmw-state"><?= $d['kind'] === 'jury' ? 'Jury' : 'Mentor' ?></span><?php endif; ?>
           <span class="cmw-state"><?= $d['open'] ? (int) $d['open'] . ' open application' . ($d['open'] === 1 ? '' : 's') : 'Nothing open right now' ?></span></div>
           <div class="cmw-act"><a class="btn btn-sm<?= $d['open'] ? ' btn-primary' : '' ?>" href="incubation.php?<?= e(http_build_query(['p' => 'desk', 'dept' => $tid])) ?>">Open the desk</a></div></li>
       <?php endforeach; ?>

@@ -37,6 +37,8 @@ $teamModules = [
     'hr'         => ['HR Management', 'Owner: runs HR for our company — employees, attendance, leave, payroll and who may use HR. View only: reads and exports it.'],
     'crm'        => ['CRM', 'Owner: creates CRMs and runs every one of ours. View only: reads them all. One CRM can still be shared on its own from that CRM\'s Access tab.'],
     'incubation' => ['Incubation Management', 'Owner: everything the administrator can do — applications, stages, assignment, evaluation, review, forms and settings. View only: reads applications, workspaces and reports, and exports them.'],
+    'organizers' => ['Event Organizers', 'Owner: runs our approved events as the administrator does — forms, applications, public pages, tickets, check-in and settings. View only: reads and exports them.'],
+    'esign'      => ['Digital Signatures', 'Owner: runs our Digital Signatures as the administrator does — every document, workflow, signatory, provider and setting. View only: reads every document and report. Without it they still sign what is sent to them.'],
     'finance'    => ['Finance Portal', 'Owner: runs our Finance Portal as the administrator does — ledger, bills, invoices, payments, budgets, settings and finance roles. View only: reads every desk and report. Without it they still claim expenses and raise requests; finer roles are given in Finance → Settings.'],
 ];
 /* All three are granted the same way, under "Modules they can run". The

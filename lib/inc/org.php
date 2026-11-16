@@ -16,7 +16,48 @@
  *
  * The organisation is fixed by inc_start() from the viewer; the public
  * application page and cron.php name it explicitly.
+ *
+ * Event Organizers (lib/eo) works the same applications: an event's forms and
+ * the people who apply are in these tables, on the one main pipeline. inc_kind()
+ * 'eo' means a page is being served as Event Organizers: its own grant, links
+ * and wording, and only event applications (eo_scope). What belongs to events
+ * alone (tickets, orders, sessions...) is written inc_ev_* in the statements and
+ * lands in tables of its own, eo_ev_* / eo_o<client id>_ev_*.
  */
+
+/** Which product the engine is running as: 'inc' (Incubation Management) or 'eo' (Event Organizers). */
+function inc_kind(): string
+{
+    return ($GLOBALS['inc_kind'] ?? 'inc') === 'eo' ? 'eo' : 'inc';
+}
+
+/** Switches product, before inc_start(). Everything per-organisation is per-product too. */
+function inc_use_kind(string $kind): void
+{
+    $kind = $kind === 'eo' ? 'eo' : 'inc';
+    if ($kind !== inc_kind()) {
+        $GLOBALS['inc_kind'] = $kind;
+        $GLOBALS['inc_settings_cache'] = [];
+    }
+}
+
+/** The grant that opens a product: client_sheet_access.sheet_key and $viewer['access']. */
+function inc_grant_key(?string $kind = null): string
+{
+    return ($kind ?? inc_kind()) === 'eo' ? 'organizers' : 'incubation';
+}
+
+/** What keys a cache of anything read from the tables in use. */
+function inc_scope_key(): string
+{
+    return inc_kind() . ':' . inc_org();
+}
+
+/** The query-string part that keeps a public link in Event Organizers ('' for Incubation). */
+function inc_kind_q(): string
+{
+    return inc_kind() === 'eo' ? '&m=eo' : '';
+}
 
 /** The organisation whose tables are in use: 0 for ours, else the client head's id. */
 function inc_org(): int
@@ -45,10 +86,18 @@ function inc_prefix(?int $org = null): string
     return $org > 0 ? 'inc_o' . $org . '_' : 'inc_';
 }
 
+/** The table prefix of the event layer. */
+function eo_prefix(?int $org = null): string
+{
+    $org = $org ?? inc_org();
+    return $org > 0 ? 'eo_o' . $org . '_' : 'eo_';
+}
+
 /** $sql with its inc_ tables (and fk_inc_ constraints) renamed for the organisation in use. */
 function inc_sql(string $sql): string
 {
     $org = inc_org();
+    $sql = preg_replace('/\binc_ev_/', eo_prefix($org) . 'ev_', $sql);
     if ($org <= 0) {
         return $sql;
     }
@@ -106,7 +155,7 @@ function inc_org_of(array $viewer): int
  * organisation is named from outside (the public form link, cron.php), so a
  * made-up number never creates tables.
  */
-function inc_org_enabled(int $org): bool
+function inc_org_enabled(int $org, ?string $kind = null): bool
 {
     if ($org === 0) {
         return true;
@@ -114,9 +163,9 @@ function inc_org_enabled(int $org): bool
     if ($org < 0) {
         return false;
     }
-    $head = fabo_one('SELECT c.id FROM clients c JOIN client_sheet_access a ON a.client_id = c.id AND a.sheet_key = "incubation"
+    $head = fabo_one('SELECT c.id FROM clients c JOIN client_sheet_access a ON a.client_id = c.id AND a.sheet_key = ?
                        WHERE c.id = ? AND c.kind = "client" AND c.parent_id IS NULL AND c.revoked_at IS NULL
-                         AND a.permission IN ("view","edit")', 'i', [$org]);
+                         AND a.permission IN ("view","edit")', 'si', [inc_grant_key($kind), $org]);
     return (bool) $head;
 }
 

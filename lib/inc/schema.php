@@ -19,7 +19,7 @@
  * administrator's changes are never overwritten.
  */
 
-const INC_SCHEMA_VERSION = 12;  // 12: applicant type (inc_applications.applicant_type_id, inc_forms.default_type_id); 11: a form shown step by step (inc_forms.stepwise); 10: a form owned by a department (inc_forms.dept_team_id); 9: stage certificates (inc_certificates); 2: departments (inc_dept_*) and the two department pipeline stages; 3: event / program name; 4: Gems; 5: Gem 1 set up for every organisation, acknowledgement on registration; 6: the form chooses its Gem; 7: score cards; 8: improvement points, last scoring try
+const INC_SCHEMA_VERSION = 13;  // 13: mentors and jury (inc_teams.kind) and Gem stages on a department desk (inc_dept_stages.gem_ids); 12: applicant type (inc_applications.applicant_type_id, inc_forms.default_type_id); 11: a form shown step by step (inc_forms.stepwise); 10: a form owned by a department (inc_forms.dept_team_id); 9: stage certificates (inc_certificates); 2: departments (inc_dept_*) and the two department pipeline stages; 3: event / program name; 4: Gems; 5: Gem 1 set up for every organisation, acknowledgement on registration; 6: the form chooses its Gem; 7: score cards; 8: improvement points, last scoring try
 
 function inc_ddl(): array
 {
@@ -488,6 +488,7 @@ function inc_ddl(): array
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(120) NOT NULL,
   description VARCHAR(255) NULL,
+  kind VARCHAR(12) NOT NULL DEFAULT 'department',
   active TINYINT(1) NOT NULL DEFAULT 1,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY u_name (name)
@@ -518,6 +519,7 @@ function inc_ddl(): array
   name VARCHAR(80) NOT NULL,
   sort SMALLINT NOT NULL DEFAULT 0,
   is_final TINYINT(1) NOT NULL DEFAULT 0,
+  gem_ids VARCHAR(255) NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY u_team_name (team_id, name),
   KEY k_team_sort (team_id, sort)
@@ -707,10 +709,10 @@ function inc_ddl(): array
 function inc_install(): void
 {
     static $done = [];
-    if (isset($done[inc_org()])) {
+    if (isset($done[inc_scope_key()])) {
         return;
     }
-    $done[inc_org()] = true;
+    $done[inc_scope_key()] = true;
     try {
         $have = inc_one("SELECT v FROM inc_settings WHERE k = '_schema'");
     } catch (Throwable $e) {
@@ -727,6 +729,7 @@ function inc_install(): void
     inc_dept_stage_upgrade();
     inc_event_name_upgrade();
     inc_form_dept_upgrade();
+    inc_dept_kind_upgrade();
     inc_form_steps_upgrade();
     inc_applicant_type_upgrade();
     require_once __DIR__ . '/gems.php';
@@ -815,6 +818,25 @@ function inc_form_dept_upgrade(): void
     $tbl = inc_sql('inc_forms');
     if (!$db->query("SHOW COLUMNS FROM `$tbl` LIKE 'dept_team_id'")->num_rows) {
         $db->query("ALTER TABLE `$tbl` ADD COLUMN dept_team_id INT UNSIGNED NULL AFTER event_name, ADD KEY k_dept (dept_team_id)");
+    }
+}
+
+/**
+ * What a department is (inc_teams.kind): a department, a mentor panel or a
+ * jury -- the same tables and desk, each kind with a desk of its own -- and
+ * which Gems' scores a department's own stage shows (inc_dept_stages.gem_ids),
+ * set by the department on its board as the main pipeline does (13).
+ */
+function inc_dept_kind_upgrade(): void
+{
+    $db = fabo_db();
+    $t = inc_sql('inc_teams');
+    if (!$db->query("SHOW COLUMNS FROM `$t` LIKE 'kind'")->num_rows) {
+        $db->query("ALTER TABLE `$t` ADD COLUMN kind VARCHAR(12) NOT NULL DEFAULT 'department' AFTER description, ADD KEY k_kind (kind)");
+    }
+    $s = inc_sql('inc_dept_stages');
+    if (!$db->query("SHOW COLUMNS FROM `$s` LIKE 'gem_ids'")->num_rows) {
+        $db->query("ALTER TABLE `$s` ADD COLUMN gem_ids VARCHAR(255) NULL AFTER is_final");
     }
 }
 

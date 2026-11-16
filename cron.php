@@ -250,6 +250,36 @@ try {
     error_log('FABO cron finance: ' . $e->getMessage());
 }
 
+/* Digital Signatures: reminders, deadline warnings, escalation, expiry, abandoned
+   signing sessions and retention, for every organisation with the module. */
+try {
+    require_once __DIR__ . '/lib/ui.php';
+    require_once __DIR__ . '/lib/ds/app.php';
+    ds_cron_all();
+} catch (Throwable $e) {
+    error_log('FABO cron esign: ' . $e->getMessage());
+}
+
+/* CEO Dashboard: the daily reading of each figure, scheduled reports and retention.
+   The dashboard also does this itself while someone has it open, so it survives a
+   portal whose cron is not set up. */
+try {
+    require_once __DIR__ . '/lib/ui.php';
+    require_once __DIR__ . '/lib/ceo/app.php';
+    ceo_cron_all();
+} catch (Throwable $e) {
+    error_log('FABO cron ceo: ' . $e->getMessage());
+}
+
+/* Event Organizers: approved events in step with the sheet, and its reminders, per organisation. */
+try {
+    require_once __DIR__ . '/lib/ui.php';
+    require_once __DIR__ . '/lib/eo/app.php';
+    eo_cron_all();
+} catch (Throwable $e) {
+    error_log('FABO cron organizers: ' . $e->getMessage());
+}
+
 /* 8. Incubation Management reminders: open tasks and follow-ups due tomorrow, once each. */
 try {
     if (is_file(__DIR__ . '/lib/inc/apps.php')) {

@@ -13,8 +13,23 @@ require_once __DIR__ . '/parts.php';
 require_once __DIR__ . '/../board.php';
 require_once __DIR__ . '/../appreport.php';
 
-$depts = inc_my_depts();
+/* Departments, mentors and jury share this desk; each kind is a desk of its
+   own (?kind=mentor, ?kind=jury), showing only that kind's teams. */
+$kindsAll = inc_dept_kinds();
+$deskKinds = inc_my_desk_kinds();
 $deptId = (int) ($_GET['dept'] ?? 0);
+$kind = (string) ($_GET['kind'] ?? '');
+foreach ($deskKinds as $k => $list) {
+    if ($deptId && isset($list[$deptId])) {
+        $kind = $k;                                  // a team's own desk, whatever ?kind says
+    }
+}
+if (!isset($kindsAll[$kind])) {
+    $kind = (string) (array_key_first($deskKinds) ?? 'department');
+}
+$K = $kindsAll[$kind];
+$GLOBALS['inc_desk_kind'] = $kind;              // the menu marks the right desk (lib/inc/nav.php)
+$depts = $deskKinds[$kind] ?? [];
 if (!isset($depts[$deptId])) {
     $deptId = (int) (array_key_first($depts) ?? 0);
 }
@@ -26,10 +41,15 @@ $f = inc_dept_filters($_GET);
 $fq = $f;
 $vq = ($view === 'list' ? ['view' => 'list'] : []) + $fq;
 $self = inc_url('desk', ['dept' => $deptId] + $vq + ($openId ? ['a' => $openId] : []));
+$retLabel = ['department' => 'Return to the incubation team', 'mentor' => 'Return with your mentoring remarks', 'jury' => 'Return with your verdict'][$kind];
 $flash = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $deptId) {
     $act = (string) ($_POST['action'] ?? '');
+    // "Send Gem form" in the selection bar submits the bulk email form with gem_go.
+    if (!empty($_POST['gem_go'])) {
+        $act = 'gem_send';
+    }
     $aid = (int) ($_POST['assign_id'] ?? 0);
     if ($act === 'board_move') {
         // A card dragged to another column (assets/inc.js); answers JSON and stops.
@@ -57,8 +77,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $deptId) {
                 inc_dept_return($aid, (string) ($_POST['note'] ?? ''));
                 inc_redirect(inc_url('desk', ['dept' => $deptId] + $vq), ['ok', 'Returned to the incubation team, with your remarks.']);
             case 'stage_save':
-                inc_dept_stage_save($deptId, inc_int_or_null($_POST['id'] ?? null), (string) ($_POST['name'] ?? ''), !empty($_POST['is_final']));
+                inc_dept_stage_save($deptId, inc_int_or_null($_POST['id'] ?? null), (string) ($_POST['name'] ?? ''), !empty($_POST['is_final']),
+                                    isset($_POST['gem_form']) ? (array) ($_POST['gem_ids'] ?? []) : null);
                 return 'Stage saved.';
+            case 'gem_send':
+                // One application (opened), or the ones ticked on the board or in the list.
+                $r = inc_dept_gem_send($deptId, (int) ($_POST['gem_id'] ?? 0), $aid ? [$aid] : array_map('intval', (array) ($_POST['ids'] ?? [])));
+                if (($r['sent'] + $r['queued']) === 0) {
+                    throw new InvalidArgumentException('Not sent: ' . inc_gem_send_summary($r));
+                }
+                return 'Gem form: ' . inc_gem_send_summary($r);
+            case 'gem_score':
+                [$ok, $msg] = inc_dept_gem_score($aid, (int) ($_POST['gem_id'] ?? 0));
+                if (!$ok) {
+                    throw new InvalidArgumentException($msg);
+                }
+                return $msg;
             case 'stage_move':
                 inc_dept_stage_move($deptId, (int) ($_POST['id'] ?? 0), (int) ($_POST['dir'] ?? 0));
                 return 'Order saved.';
@@ -80,14 +114,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $deptId) {
     }, $self);
 }
 
-$sub = 'Applications handed to your department by the incubation team, and ones you add yourself. Move them through your stages, add notes, email applicants, and return them when you are done.';
-$crumbs = ['Department desk' => null];
+$sub = $kind === 'department'
+    ? 'Applications handed to your department by the incubation team, and ones you add yourself. Move them through your stages, add notes, email applicants, and return them when you are done.'
+    : 'Applications the owner assigned to you as ' . strtolower($K[1]) . '. Move them through your stages — Gem stages show the Gem scores — add notes, email applicants, and return each one when you are done.';
+$crumbs = [$K[2] => null];
+
+/* One tab per kind of desk the viewer has (or, for the owner, every kind). */
+$kindTabs = '';
+$tabKinds = inc_can('configure') ? array_keys($kindsAll) : array_keys($deskKinds);
+if (count($tabKinds) > 1) {
+    $kindTabs = '<nav class="inc-tabs dk-kinds" aria-label="Desks">';
+    foreach ($tabKinds as $k) {
+        $n = count($deskKinds[$k] ?? []);
+        $kindTabs .= '<a' . ($k === $kind ? ' class="on" aria-current="page"' : '') . ' href="' . e(inc_url('desk', ['kind' => $k])) . '">' . e($kindsAll[$k][2])
+                   . ' <span class="muted small">' . $n . '</span></a>';
+    }
+    $kindTabs .= '</nav>';
+}
 
 if (!$depts) {
-    inc_layout_start('Department desk', $sub, $crumbs, '', $flash);
-    echo inc_empty('No departments yet.', inc_can('configure')
-        ? 'Create one under <a href="' . e(inc_url('settings', ['tab' => 'teams'])) . '">Settings → Departments</a>, and tick its people.'
-        : 'You are not in a department. The incubation team adds people to departments.');
+    inc_layout_start($K[2], $sub, $crumbs, '', $flash);
+    echo $kindTabs;
+    echo inc_empty('No ' . strtolower($K[1]) . ' yet.', inc_can('configure')
+        ? 'Create one under <a href="' . e(inc_url('settings', ['tab' => 'teams', 'kind' => $kind])) . '">Settings → Departments</a>: choose the type <strong>' . e($K[0]) . '</strong> and tick its people.'
+        : 'You are not on one. The owner of Incubation Management adds people.');
     inc_layout_end();
     return;
 }
@@ -164,7 +214,7 @@ if (($_GET['download'] ?? '') === 'xlsx' && $_SERVER['REQUEST_METHOD'] === 'GET'
     inc_send_xlsx($slug . '-applications' . ($f ? '-filtered' : '') . '-' . date('Ymd-His') . '.xlsx', ['Summary' => $summary] + $sheets);
 }
 
-$pick = $openId ? '' : '<a class="btn btn-sm btn-primary" data-popup href="' . e(inc_url('new', ['dept' => $deptId])) . '">+ Add application</a> '
+$pick = $openId ? '' : (inc_dept_may_intake($deptId) ? '<a class="btn btn-sm btn-primary" data-popup href="' . e(inc_url('new', ['dept' => $deptId])) . '">+ Add application</a> ' : '')
       . inc_view_switch('desk', $view, ['dept' => $deptId] + $fq)
       . ' <a class="btn btn-sm" href="' . e(inc_url('desk', ['dept' => $deptId, 'download' => 'xlsx'] + $fq)) . '" title="' . ($f ? 'The applications the filters show, with every answer and links to their documents' : 'Every application, with every answer and links to their documents') . '">'
       . inc_dl_icon() . ' Export Excel' . ($f ? ' (' . count($board['open']) . ' filtered)' : '') . '</a>';
@@ -189,10 +239,26 @@ $mailBox = static function (int $assignId, string $to): string {
          . '<button class="btn btn-primary"><span aria-hidden="true">✉</span> ' . ($assignId ? 'Send to ' . e($to) : 'Send <span data-dkcount>0</span> email<span data-dkpl>s</span>') . '</button></div></form>';
 };
 if (count($depts) > 1) {
-    $pick .= '<form method="get" class="inc-row"><input type="hidden" name="p" value="desk">' . ($view === 'list' ? '<input type="hidden" name="view" value="list">' : '')
+    $pick .= '<form method="get" class="inc-row"><input type="hidden" name="p" value="desk"><input type="hidden" name="kind" value="' . e($kind) . '">' . ($view === 'list' ? '<input type="hidden" name="view" value="list">' : '')
            . inc_select('dept', $depts, $deptId) . ' <button class="btn btn-sm">Open</button></form>';
 }
 inc_layout_start($depts[$deptId], $sub, $crumbs, $pick, $flash);
+echo $kindTabs;
+$gemsAll = inc_gems(true);
+$gemScores = inc_dept_gem_scores($board['open'], $stages);
+$gemBadges = static fn(int $assignId): string => isset($gemScores[$assignId])
+    ? '<div class="dk-gems">' . implode(' ', array_map(static fn($x) => inc_gem_score_html($x[0], $x[1]), $gemScores[$assignId])) . '</div>' : '';
+/* The Gem stage ticks of a stage form: which Gems' scores it shows. */
+$gemTicks = static function (array $on) use ($gemsAll): string {
+    if (!$gemsAll) {
+        return '';
+    }
+    $h = '<fieldset class="inc-fs"><legend>Gem stage — show these Gem scores here</legend><input type="hidden" name="gem_form" value="1">';
+    foreach ($gemsAll as $gid => $g) {
+        $h .= '<label class="check"><input type="checkbox" name="gem_ids[]" value="' . (int) $gid . '"' . (in_array((int) $gid, $on, true) ? ' checked' : '') . '> ' . e($g['name']) . '</label>';
+    }
+    return $h . '</fieldset>';
+};
 
 /* ------------------------------------------------ one application, opened */
 if ($openId) {
@@ -233,10 +299,17 @@ if ($openId) {
            . ' <button class="btn btn-sm">Add note</button></form>';
         echo '<h3>Email the applicant</h3>' . ($app['applicant_email'] ? $mailBox((int) $d['id'], (string) $app['applicant_email'])
                                                                     : '<p class="muted small">No email address on this application.</p>');
-        echo '<h3>Return to the incubation team</h3><p class="muted small">When your department is done. It goes back to the incubation team with your remarks.</p>'
+        if ($gemsAll) {
+            echo '<h3>Gems</h3>' . (inc_dept_gem_html($app, $d, $stages) ?: '<p class="muted small">No Gem sent yet.</p>');
+            echo inc_form_open('class="inc-row"') . '<input type="hidden" name="action" value="gem_send"><input type="hidden" name="assign_id" value="' . (int) $d['id'] . '">'
+               . inc_select('gem_id', array_map(static fn($g) => $g['name'], $gemsAll), count($gemsAll) === 1 ? (int) array_key_first($gemsAll) : '', 'Choose Gem', 'required')
+               . ' <button class="btn btn-sm">Email Gem form</button></form>';
+        }
+        echo '<h3>' . e($retLabel) . '</h3><p class="muted small">When you are done. It goes back to the incubation team with your '
+           . ($kind === 'jury' ? 'verdict' : 'remarks') . '.</p>'
            . inc_form_open() . '<input type="hidden" name="action" value="return"><input type="hidden" name="assign_id" value="' . (int) $d['id'] . '">'
-           . inc_textarea('note', '', 3, 'required placeholder="Your conclusion and anything the incubation team should know."')
-           . ' <button class="btn btn-primary">Return to incubation team</button></form>';
+           . inc_textarea('note', '', 3, 'required placeholder="' . ($kind === 'jury' ? 'Your verdict and the reasons for it.' : ($kind === 'mentor' ? 'How the mentoring went, and what the startup should do next.' : 'Your conclusion and anything the incubation team should know.')) . '"')
+           . ' <button class="btn btn-primary">' . e($retLabel) . '</button></form>';
         echo '<h3>Timeline</h3>' . inc_timeline_html(array_slice(inc_timeline((int) $app['id'], null), 0, 15));
         echo '</div></div></section>';
         inc_layout_end();
@@ -329,6 +402,7 @@ if ($view === 'board') {
         . inc_form_open() . '<input type="hidden" name="action" value="stage_save"><input type="hidden" name="id" value="' . (int) $s['id'] . '">'
         . inc_field('Name', '<input type="text" name="name" value="' . e($s['name']) . '" maxlength="80" required>')
         . '<label class="check"><input type="checkbox" name="is_final" value="1"' . ((int) $s['is_final'] === 1 ? ' checked' : '') . '> Final stage</label> '
+        . $gemTicks(inc_dept_stage_gem_ids($s))
         . '<button class="btn btn-primary btn-sm">Save stage</button></form>'
         . (count($stages) > 1 ? '<div class="kb-danger">' . inc_button('Delete this stage', ['action' => 'stage_delete', 'id' => $s['id']], 'btn btn-sm btn-reject',
                                        'Delete the stage "' . $s['name'] . '"? Only an empty stage can be deleted.')
@@ -338,7 +412,7 @@ if ($view === 'board') {
         $here = array_values(array_filter($board['open'], static fn($r) => $stageOf($r) === (int) $s['id']));
         echo '<section class="kb-col' . ((int) $s['is_final'] === 1 ? ' kb-final' : '') . '" data-stage="' . (int) $s['id'] . '" aria-label="' . e($s['name']) . '">'
            . '<header class="kb-colhead">' . ($here ? '<input type="checkbox" class="kb-colall" data-colall title="Select every card in this column" aria-label="Select all in ' . e($s['name']) . '">' : '')
-           . '<span class="kb-colname">' . e($s['name']) . '</span><span class="kb-count">' . count($here) . '</span>' . $stageMenu($s, $i) . '</header><div class="kb-list">';
+           . '<span class="kb-colname">' . e($s['name']) . '</span>' . (inc_dept_stage_gem_ids($s) ? '<span class="kb-gemflag" title="Gem stage: Gem scores show here">◆ Gem</span>' : '') . '<span class="kb-count">' . count($here) . '</span>' . $stageMenu($s, $i) . '</header><div class="kb-list">';
         // A department fed by a busy form can hold thousands: the board shows the first 100 of each column, the list has them all.
         $docs = inc_dept_docs(array_slice($here, 0, 100));
         foreach (array_slice($here, 0, 100) as $r) {
@@ -350,6 +424,7 @@ if ($view === 'board') {
                . '<a class="kb-title" href="' . e($openLink($r)) . '">' . e($r['startup_name'] ?: $r['applicant_name']) . '</a>'
                . '<div class="kb-sub">' . e($r['form_name']) . '</div>'
                . (isset($docs[(int) $r['application_id']]) ? '<div class="dk-docs">' . $docsLink($docs[(int) $r['application_id']]) . '</div>' : '')
+               . $gemBadges((int) $r['id'])
                . ($r['note'] ? '<div class="kb-tag">' . e(mb_strimwidth((string) $r['note'], 0, 110, '…')) . '</div>' : '')
                . '<footer class="kb-foot"><span>' . e($r['ref']) . '</span><span title="Days since it was assigned">' . ($days <= 0 ? 'today' : $days . 'd') . '</span>'
                . '<span class="kb-av" title="Assigned by ' . e($r['assigned_by']) . '">' . e(inc_board_initials((string) $r['assigned_by'])) . '</span></footer></article>';
@@ -361,11 +436,12 @@ if ($view === 'board') {
        . inc_form_open() . '<input type="hidden" name="action" value="stage_save">'
        . '<input type="text" name="name" maxlength="80" required placeholder="Stage name, e.g. Site visit" aria-label="New stage name">'
        . '<label class="check"><input type="checkbox" name="is_final" value="1"> Final stage</label>'
+       . $gemTicks([])
        . '<button class="btn btn-primary btn-sm">+ Add stage</button></form>'
        . '<p class="muted small">It goes at the end; move it with ← → in its ⋯ menu.</p></div></section>';
     echo '</div></div>';
 } elseif ($board['open']) {
-    echo '<section class="card"><div class="scrollx"><table class="data stack"><thead><tr><th><input type="checkbox" form="deskMail" data-checkall="ids[]" aria-label="Tick every application on this page"></th><th>Application</th><th>Form</th><th>Documents</th><th>Stage</th><th>Assigned</th><th>Note from the incubation team</th><th></th></tr></thead><tbody>';
+    echo '<section class="card"><div class="scrollx"><table class="data stack"><thead><tr><th><input type="checkbox" form="deskMail" data-checkall="ids[]" aria-label="Tick every application on this page"></th><th>Application</th><th>Form</th><th>Documents</th><th>Stage</th><th class="num">Gem score</th><th>Assigned</th><th>Note from the incubation team</th><th></th></tr></thead><tbody>';
     $pg = max(1, (int) ($_GET['pg'] ?? 1));
     $rows = array_slice($board['open'], ($pg - 1) * 50, 50);
     $docs = inc_dept_docs($rows);
@@ -377,6 +453,7 @@ if ($view === 'board') {
            . '<td data-l="Documents">' . (isset($docs[(int) $r['application_id']]) ? $docsLink($docs[(int) $r['application_id']]) : '<span class="muted">—</span>') . '</td>'
            . '<td data-l="Stage">' . inc_form_open('class="inc-row"') . '<input type="hidden" name="action" value="move"><input type="hidden" name="assign_id" value="' . (int) $r['id'] . '">'
            . inc_select('stage_id', $stageMap, $stageOf($r)) . ' <button class="btn btn-sm">Move</button></form></td>'
+           . '<td data-l="Gem score" class="num">' . ($gemBadges((int) $r['id']) ?: '<span class="muted">—</span>') . '</td>'
            . '<td data-l="Assigned" class="nowrap">' . e(inc_fmt_date($r['assigned_at'])) . '<div class="muted small">' . e($r['assigned_by']) . '</div></td>'
            . '<td data-l="Note">' . ($r['note'] ? e(mb_strimwidth((string) $r['note'], 0, 160, '…')) : '<span class="muted">—</span>') . '</td>'
            . '<td><a class="btn btn-sm" href="' . e($openLink($r)) . '">Open</a></td></tr>';
@@ -388,6 +465,8 @@ if ($view === 'board') {
 if ($board['open']) {
     echo '<div class="dk-bar" data-deskbar hidden role="region" aria-label="Selected applications"><span class="dk-bar-n"><b data-dkcount>0</b> selected</span>'
        . '<button type="button" class="btn btn-sm dk-bar-clear" data-dkclear>Clear</button>'
+       . ($gemsAll ? '<span class="dk-bar-gem">' . inc_select('gem_id', array_map(static fn($g) => $g['name'], $gemsAll), count($gemsAll) === 1 ? (int) array_key_first($gemsAll) : '', 'Choose Gem', 'form="deskMail" aria-label="Gem"')
+                     . ' <button class="btn btn-sm" form="deskMail" name="gem_go" value="1" formnovalidate>◆ Send Gem form</button></span>' : '')
        . '<button type="button" class="btn btn-sm btn-primary" data-dkopen><span aria-hidden="true">✉</span> Email selected</button></div>';
     echo '<dialog class="dk-dialog" id="deskMailDlg" aria-labelledby="dkTitle"><div class="dk-dialog-h"><div><h2 id="dkTitle">Email <span data-dkcount>0</span> applicant<span data-dkpl>s</span></h2>'
        . '<span class="muted small">From ' . e($depts[$deptId]) . ' · one email each, personalised</span></div>'
@@ -399,7 +478,7 @@ if ($board['open']) {
 if (!$board['open'] && $f) {
     echo '<p class="muted">Nothing open matches these filters. <a href="' . e(inc_url('desk', $keep)) . '">Clear all</a></p>';
 } elseif (!$board['open']) {
-    echo '<p class="muted">No applications are open with ' . e($depts[$deptId]) . ' right now. When the incubation team assigns one, it appears here and you are told by email.</p>';
+    echo '<p class="muted">No applications are open with ' . e($depts[$deptId]) . ' right now. When the ' . ($kind === 'department' ? 'incubation team' : 'owner') . ' assigns one, it appears here and you are told by email.</p>';
 }
 
 inc_layout_end();

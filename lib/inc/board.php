@@ -264,7 +264,8 @@ function inc_board_app_card(array $a, array $gems, bool $drag, string $selectFor
          . '<div class="kb-sub">' . e($a['startup_name'] !== '' ? $a['applicant_name'] : (string) $a['applicant_email']) . '</div>'
          // Who it is from (Student, Startup, Mentor...), then where it came from (Website, Program, Walk-in...).
          . '<div class="kb-tags">' . (!empty($a['applicant_type_id'])
-                  ? '<span class="kb-type" title="Applicant type">' . e(inc_master_name((int) $a['applicant_type_id'])) . '</span>' : '')
+                  ? '<span class="kb-type" title="Type of participant">' . e(inc_master_name((int) $a['applicant_type_id'])) . '</span>' : '')
+              . (!empty($a['event_name']) ? '<span class="kb-prog" title="Program name">' . e((string) $a['event_name']) . '</span>' : '')
               . '<span class="kb-src" title="Where it came from">' . e(inc_came_from($a)) . '</span></div>'
          // The answers its form puts on the card (expertise, sectors...).
          . ($facts ? '<dl class="kb-facts">' . implode('', array_map(static fn($x) => '<div><dt>' . e($x[0]) . '</dt><dd title="' . e($x[1]) . '">' . e($x[1]) . '</dd></div>', $facts)) . '</dl>' : '')

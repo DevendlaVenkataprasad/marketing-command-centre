@@ -346,6 +346,7 @@ table.data tr.hl td { background: #f7faff; }
 .kb-tags { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
 .kb-type { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 9px; background: #e6f4ee; color: #17663f; }
 .kb-src { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 9px; background: #e8f0fc; color: #1e4f9c; }
+.kb-prog { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 9px; background: #f3ecfb; color: #5b2e9c; }
 .kb-dept { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 9px; background: #fff1dc; color: #8a4b00; }
 /* Answers the form puts on the card (expertise, sectors...): label, then up to two lines of answer. */
 .kb-facts { margin: 0; display: grid; gap: 2px; font-size: 11.5px; line-height: 1.35; }
@@ -900,3 +901,19 @@ html.dk-bar-on .wrap-page.inc { padding-bottom: 90px; }
 .ap-chosen strong { font-size: 15px; } .ap-chosen span { font-size: 12.5px; color: var(--ink-soft); display: block; }
 .ap-form .inc-formfoot { position: sticky; bottom: 0; background: var(--panel); padding: 12px 0 2px; border-top: 1px solid var(--line-soft); display: flex; gap: 8px; justify-content: flex-end; }
 @media (max-width: 640px) { .dk-bar { left: 12px; right: 12px; transform: none; bottom: 12px; } @keyframes dk-up { from { opacity: 0; } to { opacity: 1; } } }
+
+/* ---- mentors and jury desks, Gem stages on a desk (lib/inc/pages/desk.php) */
+.dk-kinds { margin: 0 0 14px; }
+.dk-kinds a { text-decoration: none; background: var(--grey-bg); color: var(--ink-soft); padding: 5px 12px; border-radius: 14px; font-size: 13px; font-weight: 600; }
+.dk-kinds a.on { background: var(--ink); color: #fff; }
+.dk-kinds a.on .muted { color: rgba(255,255,255,.75); }
+.kb-gemflag { font-size: 11px; font-weight: 650; padding: 1px 7px; border-radius: 9px; background: #ece6ff; color: #4b2aa8; white-space: nowrap; }
+.dk-gems { margin: 4px 0 2px; display: flex; flex-wrap: wrap; gap: 4px; }
+.dk-gems .inc-gemscore { font-size: 12px; }
+.dk-gem { border: 1px solid var(--line, #e6e6e6); border-radius: 10px; padding: 10px 12px; margin: 0 0 10px; }
+.dk-gem h4 { margin: 0 0 6px; }
+.dk-bar-gem { display: inline-flex; align-items: center; gap: 6px; }
+.dk-bar-gem select { max-width: 170px; }
+.inc-kindhead { margin: 14px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); }
+.inc-kindhead:first-of-type { margin-top: 4px; }
+@media (max-width: 640px) { .dk-bar { flex-wrap: wrap; } .dk-bar-gem select { max-width: 120px; } }

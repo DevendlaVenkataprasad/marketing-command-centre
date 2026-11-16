@@ -17,6 +17,7 @@ header('X-Robots-Tag: noindex, nofollow');
 header('Cache-Control: no-store, private');
 
 $org = max(0, (int) ($_GET['o'] ?? 0));
+inc_use_kind((string) ($_GET['m'] ?? ''));
 $req = $gem = null;
 if (inc_org_enabled($org)) {
     inc_start(['is_admin' => false, 'client' => ['name' => 'applicant'], 'access' => null], $org);

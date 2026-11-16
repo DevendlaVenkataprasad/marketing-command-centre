@@ -26,7 +26,7 @@ function inc_app(int $id): ?array
                      LEFT JOIN inc_startups s ON s.id = a.startup_id
                      LEFT JOIN inc_workspaces w ON w.id = a.workspace_id
                      LEFT JOIN inc_stages ls ON ls.id = w.stage_id
-                     WHERE a.id = ?', 'i', [$id]);
+                     WHERE a.id = ?' . (inc_kind() === 'eo' ? ' AND a.form_id IN (SELECT form_id FROM inc_ev_forms)' : ''), 'i', [$id]);
 }
 
 function inc_app_need(int $id): array
@@ -98,6 +98,9 @@ function inc_app_filters(array $q): array
 function inc_app_where(array $f): array
 {
     $w = ['1=1'];
+    if (inc_kind() === 'eo') {
+        $w[] = 'a.form_id IN (SELECT form_id FROM inc_ev_forms)';
+    }
     $t = '';
     $p = [];
     if (isset($f['q'])) {

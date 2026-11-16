@@ -17,6 +17,15 @@ require_once __DIR__ . '/gems.php';
 /** page => [title, file, permission] */
 function inc_pages(): array
 {
+    if (inc_kind() === 'eo') {
+        require_once __DIR__ . '/../eo/app.php';
+        return eo_pages(inc_pages_shared());
+    }
+    return inc_pages_shared();
+}
+
+function inc_pages_shared(): array
+{
     return [
         'dashboard'    => ['Incubation Management', 'dashboard', 'view'],
         'applications' => ['Applications', 'applications', 'view'],
@@ -45,6 +54,11 @@ function inc_app_main(array $viewer): void
     header('X-Robots-Tag: noindex, nofollow');
     header('Cache-Control: no-store, private');
     inc_start($viewer);
+    if (inc_kind() === 'eo') {
+        require_once __DIR__ . '/../eo/app.php';
+        eo_begin();
+        eo_scope((string) ($_GET['p'] ?? 'dashboard'));
+    }
     inc_ninth_pillar_upgrade();
     inc_notify_sync();
     // ?embed=1: the page as it shows inside a pop-up, without the portal's menu and header.
@@ -67,7 +81,9 @@ function inc_app_main(array $viewer): void
     }
     $GLOBALS['inc_page'] = $page;
     inc_gem_score_later();
-    require __DIR__ . '/pages/' . $pages[$page][1] . '.php';
+    // A file named eo:… is one of Event Organizers' own pages.
+    $file = $pages[$page][1];
+    require str_starts_with($file, 'eo:') ? __DIR__ . '/../eo/pages/' . substr($file, 3) . '.php' : __DIR__ . '/pages/' . $file . '.php';
 }
 
 /**
@@ -159,10 +175,11 @@ function inc_layout_start(string $title, string $sub = '', array $crumbs = [], s
            . '<title>' . e($title) . '</title><link rel="stylesheet" href="' . e(fabo_asset($pre . 'assets/app.css')) . '">'
            . '<link rel="stylesheet" href="' . e(fabo_asset($pre . 'assets/inc.css')) . '"></head><body class="inc-embed">';
     } else {
-        fabo_head($ctx['viewer'], $title === 'Incubation Management' ? $title : $title . ' · Incubation Management', 'inc-' . $page);
+        $home = inc_words('Incubation Management');
+        fabo_head($ctx['viewer'], $title === $home ? $title : $title . ' · ' . $home, inc_kind() . '-' . $page);
     }
     echo '<main class="wrap-page inc" id="main">';
-    $trail = '<a href="' . e(inc_url('dashboard')) . '">Incubation Management</a>';
+    $trail = '<a href="' . e(inc_url('dashboard')) . '">' . e(inc_words('Incubation Management')) . '</a>';
     foreach ($crumbs as $label => $href) {
         $trail .= ' &rsaquo; ' . ($href ? '<a href="' . e($href) . '">' . e($label) . '</a>' : e($label));
     }
@@ -197,6 +214,11 @@ function inc_options(array $map, $selected, string $blank = ''): string
     $h = $blank !== '' ? '<option value="">' . e($blank) . '</option>' : '';
     $sel = is_array($selected) ? array_map('strval', $selected) : [(string) $selected];
     foreach ($map as $k => $v) {
+        // A nested list is a group: label => [value => text] (inc_team_picker()).
+        if (is_array($v)) {
+            $h .= '<optgroup label="' . e((string) $k) . '">' . inc_options($v, $selected) . '</optgroup>';
+            continue;
+        }
         $h .= '<option value="' . e((string) $k) . '"' . (in_array((string) $k, $sel, true) ? ' selected' : '') . '>' . e((string) $v) . '</option>';
     }
     return $h;
@@ -270,7 +292,7 @@ function inc_tile(string $label, string $value, string $href = '', string $tone 
  */
 function inc_apps_tabs(string $current): string
 {
-    $tabs = ['applications' => 'All applications', 'workspaces' => 'Incubations'];
+    $tabs = inc_kind() === 'eo' ? ['applications' => 'Event applications'] : ['applications' => 'All applications', 'workspaces' => 'Incubations'];
     $h = '<nav class="inc-apptabs" aria-label="Applications">';
     foreach ($tabs as $p => $label) {
         $h .= '<a href="' . e(inc_url($p)) . '"' . ($p === $current ? ' class="on" aria-current="page"' : '') . '>' . e($label) . '</a>';
@@ -408,12 +430,12 @@ function inc_filter_bar(string $page, array $f, string $sort, bool $scoreFields 
     $defs = [
         'Pipeline stage'    => ['stage_id', inc_stage_map('crm')],
         'Purpose'           => ['purpose', inc_purposes()],
-        'Event / program'   => ['event', $events + (isset($f['event']) ? [$f['event'] => $f['event']] : [])],
+        'Program name'      => ['event', $events + (isset($f['event']) ? [$f['event'] => $f['event']] : [])],
         'Form'              => ['form_id', array_column(inc_forms_list(true), 'name', 'id')],
         'Department'        => ['route_team', inc_teams(false)],
         'Development stage' => ['dev_stage', inc_dev_stages()],
         'Evaluation'        => ['eval_status', array_diff_key(inc_eval_status_labels(), ['draft' => 1, 'in_progress' => 1])],
-        'Applicant type'    => ['applicant_type_id', inc_masters('applicant_type', false)],
+        'Type of participant' => ['applicant_type_id', inc_masters('applicant_type', false)],
         'Source'            => ['source_id', inc_masters('source', false)],
         'Spoke'             => ['spoke_id', inc_masters('spoke', false)],
         'Sector'            => ['sector', inc_sector_options() + (isset($f['sector']) ? [$f['sector'] => $f['sector']] : [])],
@@ -424,7 +446,10 @@ function inc_filter_bar(string $page, array $f, string $sort, bool $scoreFields 
         'Duplicate check'   => ['dup', ['suspected' => 'Suspected', 'cleared' => 'Cleared', 'confirmed' => 'Confirmed duplicate']],
     ];
     if (!$events && !isset($f['event'])) {
-        unset($defs['Event / program']);
+        unset($defs['Program name']);
+    }
+    if (inc_kind() === 'eo') {
+        unset($defs['Incubation stage'], $defs['Incubation'], $defs['Development stage']);
     }
     $sorts = ['newest' => 'Newest first', 'oldest' => 'Oldest first', 'score' => 'Highest official score', 'uniq' => 'Highest uniqueness', 'name' => 'Name', 'stage' => 'Pipeline stage', 'gem' => 'Highest Gem score'];
 

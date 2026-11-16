@@ -24,13 +24,17 @@ header('Cache-Control: no-store, private');
    only one whose head holds the module, so a made-up number opens nothing
    (and never creates tables). */
 $org = max(0, (int) ($_GET['o'] ?? 0));
+inc_use_kind((string) ($_GET['m'] ?? ''));
+if (inc_kind() === 'eo') {
+    require_once __DIR__ . '/lib/eo/app.php';
+}
 if (!inc_org_enabled($org)) {
     $org = -1;
 }
 if ($org >= 0) {
     inc_start(['is_admin' => false, 'client' => ['name' => 'applicant'], 'access' => null], $org);
 }
-$orgQ = $org > 0 ? '&o=' . $org : '';
+$orgQ = ($org > 0 ? '&o=' . $org : '') . inc_kind_q();
 
 $token = (string) ($_GET['f'] ?? '');
 $form = $token !== '' && $org >= 0 ? inc_form_by_token($token) : null;
@@ -56,6 +60,11 @@ if ($open && $version && $_SERVER['REQUEST_METHOD'] === 'POST') {
         fabo_throttle_hit('inc-all', $token);
         try {
             $done = inc_app_submit($open, $version, $raw, $files, ['channel' => 'public', 'ticket' => (string) ($_POST['ticket'] ?? ''), 'ip' => fabo_client_ip()]);
+            // An event's form: payment, or a ticket at once, follows from the event.
+            if (inc_kind() === 'eo' && ($next = eo_after_submit($done, $open))) {
+                header('Location: ' . $next);
+                exit;
+            }
         } catch (InvalidArgumentException $e) {
             [$errors, $message] = inc_submit_errors($e);
         } catch (Throwable $e) {
@@ -85,7 +94,7 @@ fabo_csrf_token();
 <?php if ($done): ?>
   <div class="fm-head"><div class="fm-eyebrow">Application received</div><h1>Thank you</h1>
   <p class="fm-lead"><?= $done['ref'] !== '' ? 'Your application reference is <strong>' . e($done['ref']) . '</strong>. Please keep it for any follow-up.' : 'Your application has been received.' ?>
-  The incubation team will be in touch.</p></div>
+  <?= e(inc_words('The incubation team')) ?> will be in touch.</p></div>
 <?php elseif ($open && $version): ?>
   <div class="fm-head"><div class="fm-eyebrow"><?= e(isset(inc_purposes()[$open['purpose']]) ? inc_purpose_text($open['purpose'], $open['event_name'] ?? null) : 'Application') ?></div><h1><?= e($open['name']) ?></h1>
   <?= $open['description'] ? '<p class="fm-lead">' . nl2br(e($open['description'])) . '</p>' : '' ?></div>
@@ -103,7 +112,7 @@ fabo_csrf_token();
   <div class="fm-head"><div class="fm-eyebrow">Apply</div><h1><?= $list ? 'Choose what you are applying for' : 'This application link is not open' ?></h1>
   <?php if (!$list): ?><p class="fm-lead">The form may have closed, or the link may be incomplete. Please check the link you were given.</p><?php endif; ?></div>
   <?php foreach ($list as $f): ?>
-    <p><a class="btn" href="incubation-apply.php?f=<?= e($f['public_token'] . $orgQ) ?>"><?= e($f['name']) ?></a> <span class="fm-hint"><?= e(inc_purpose_text($f['purpose'], $f['event_name'] ?? null)) ?></span></p>
+    <p><a class="btn" href="<?= inc_kind() === 'eo' ? 'event-apply' : 'incubation-apply' ?>.php?f=<?= e($f['public_token'] . $orgQ) ?>"><?= e($f['name']) ?></a> <span class="fm-hint"><?= e(inc_purpose_text($f['purpose'], $f['event_name'] ?? null)) ?></span></p>
   <?php endforeach; ?>
 <?php endif; ?>
 </div></main>

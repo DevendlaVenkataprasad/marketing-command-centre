@@ -20,11 +20,12 @@ header('Referrer-Policy: no-referrer');
 if (isset($_GET['id'])) {
     $hit = inc_cert_find((string) $_GET['id']);
     if ($hit) {
-        header('Location: certificate.php?c=' . $hit[1] . ($hit[0] > 0 ? '&o=' . $hit[0] : ''));
+        header('Location: certificate.php?c=' . $hit[1] . ($hit[0] > 0 ? '&o=' . $hit[0] : '') . (($hit[2] ?? '') === 'eo' ? '&m=eo' : ''));
         exit;
     }
 }
 $org = max(0, (int) ($_GET['o'] ?? 0));
+inc_use_kind((string) ($_GET['m'] ?? ''));
 $code = (string) ($_GET['c'] ?? '');
 $c = null;
 if (preg_match('/^[a-f0-9]{24}$/', $code) && inc_org_enabled($org)) {
@@ -36,7 +37,7 @@ if (preg_match('/^[a-f0-9]{24}$/', $code) && inc_org_enabled($org)) {
     }
 }
 $snap = $c ? (json_decode((string) $c['snapshot'], true) ?: null) : null;
-$self = rtrim(fabo_portal_url(), '/') . '/certificate.php?c=' . $code . ($org > 0 ? '&o=' . $org : '');
+$self = rtrim(fabo_portal_url(), '/') . '/certificate.php?c=' . $code . ($org > 0 ? '&o=' . $org : '') . inc_kind_q();
 $title = $snap ? $snap['startup'] . ' — ' . $c['stage_name'] : 'Certificate';
 ?><!doctype html>
 <html lang="en">

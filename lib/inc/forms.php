@@ -39,6 +39,17 @@ function inc_field_types(): array
     ];
 }
 
+/** The applicant type of this name, added to the list if it is new. */
+function inc_applicant_type_id(string $name): int
+{
+    $row = inc_one('SELECT id FROM inc_masters WHERE kind = "applicant_type" AND name = ?', 's', [$name]);
+    if ($row) {
+        return (int) $row['id'];
+    }
+    $sort = (int) (inc_one('SELECT MAX(sort) AS n FROM inc_masters WHERE kind = "applicant_type"')['n'] ?? 0);
+    return inc_exec('INSERT INTO inc_masters (kind, name, sort) VALUES ("applicant_type",?,?)', 'si', [$name, $sort + 1]);
+}
+
 /** Which application column a field may fill. One field per target in a form. */
 function inc_field_targets(): array
 {
@@ -51,6 +62,7 @@ function inc_field_targets(): array
         'spoke'           => 'Spoke',
         'sector'          => 'Sector',
         'dev_stage'       => 'Startup development stage',
+        'applicant_type'  => 'Type of participant',
     ];
 }
 
@@ -240,6 +252,7 @@ function inc_forms_list(bool $withArchived = false): array
                      FROM inc_forms f WHERE f.id NOT IN (SELECT g.invite_form_id FROM inc_gems g WHERE g.invite_form_id IS NOT NULL)'
                    // A purpose's question template is not a form anybody applies on.
                    . (($tpl = inc_purpose_template_ids()) ? ' AND f.id NOT IN (' . implode(',', $tpl) . ')' : '')
+                   . (inc_kind() === 'eo' ? ' AND f.id IN (SELECT form_id FROM inc_ev_forms)' : '')
                    . ($withArchived ? '' : ' AND f.archived = 0') . ' ORDER BY f.archived, f.name');
 }
 
@@ -853,7 +866,7 @@ function inc_app_submit(array $form, array $version, array $raw, array $files, a
     if ($channel === 'admin') {
         // Staff entering it: the incubation team, or a department member filing one for their own department.
         $deptId = (int) ($ctx['dept_team_id'] ?? 0);
-        if (!($deptId > 0 && function_exists('inc_dept_may_work') && inc_dept_may_work($deptId))) {
+        if (!($deptId > 0 && function_exists('inc_dept_may_intake') && inc_dept_may_intake($deptId))) {
             inc_need('edit');
         }
     } elseif ((int) $form['public_enabled'] !== 1) {
@@ -898,6 +911,10 @@ function inc_app_submit(array $form, array $version, array $raw, array $files, a
     if ($type && !isset(inc_masters('applicant_type', false)[$type])) {
         $type = null;
     }
+    // Or what the applicant answered, on a form that asks: new answers join the list.
+    if (isset($mapped['applicant_type']) && is_string($mapped['applicant_type']) && trim($mapped['applicant_type']) !== '') {
+        $type = inc_applicant_type_id(mb_substr(trim($mapped['applicant_type']), 0, 120));
+    }
 
     // A form that refuses duplicates: one live application per email per form.
     if ((int) $form['block_duplicates'] === 1 && $email) {
@@ -905,7 +922,7 @@ function inc_app_submit(array $form, array $version, array $raw, array $files, a
                           WHERE a.form_id = ? AND a.applicant_email = ? AND s.is_terminal = 0 AND a.dup_status <> "confirmed" LIMIT 1',
                          'is', [(int) $form['id'], $email]);
         if ($live) {
-            throw new InvalidArgumentException('An application from ' . $email . ' to this form is already being processed (reference ' . $live['ref'] . '). Please contact the incubation team to update it.');
+            throw new InvalidArgumentException(inc_words('An application from ' . $email . ' to this form is already being processed (reference ' . $live['ref'] . '). Please contact the incubation team to update it.'));
         }
     }
 

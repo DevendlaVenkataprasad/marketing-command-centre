@@ -14,7 +14,7 @@ try {
 } catch (InvalidArgumentException $e) {
     fabo_deny($e->getMessage(), 404);
 }
-$tabs = ['overview' => 'Overview', 'evaluation' => 'Evaluation', 'depts' => 'Departments', 'assign' => 'Assignment', 'activity' => 'Activity & notes'];
+$tabs = inc_kind() === 'eo' ? ['overview' => 'Overview', 'depts' => 'Departments'] : ['overview' => 'Overview', 'evaluation' => 'Evaluation', 'depts' => 'Departments · Mentors · Jury', 'assign' => 'Assignment', 'activity' => 'Activity & notes'];
 $tab = isset($tabs[$_GET['tab'] ?? '']) ? (string) $_GET['tab'] : 'overview';
 $self = inc_url('application', ['id' => $id, 'tab' => $tab]);
 $flash = null;
@@ -324,30 +324,35 @@ if ($tab === 'depts') {
             $openWith[(int) $w['team_id']] = true;
         }
     }
-    echo '<div class="inc-grid2"><section class="card"><h2>Assign to departments</h2>';
+    echo '<div class="inc-grid2"><section class="card"><h2>Assign to departments, mentors or jury</h2>';
     if (!$depts) {
         echo inc_empty('No departments yet.', 'Create them under <a href="' . e(inc_url('settings', ['tab' => 'teams'])) . '">Settings → Departments</a> from your existing team.');
     } elseif (!inc_can('assign')) {
         echo '<p class="muted small">Only the owner of Incubation Management assigns applications to departments.</p>';
     } else {
-        echo '<p class="muted small">Tick one or more. Each department sees it on its desk, works it in its own stages, and returns it to you; '
+        echo '<p class="muted small">Tick one or more departments, mentors or jury. Each sees it on its own desk, works it in its own stages (Gem stages included), and returns it to you; '
            . 'the application stays at its pipeline stage. Their members are told by email.</p>'
-           . inc_form_open() . '<input type="hidden" name="action" value="dept_assign"><fieldset class="inc-fs"><legend>Departments</legend>';
-        foreach ($depts as $tid => $tn) {
-            $n = count(inc_dept_people($tid));
-            echo '<label class="check"><input type="checkbox" name="dept[]" value="' . (int) $tid . '"' . (isset($openWith[$tid]) ? ' disabled' : '') . '> ' . e($tn)
-               . ' <span class="muted small">' . $n . ' ' . ($n === 1 ? 'person' : 'people') . (isset($openWith[$tid]) ? ' · already has it' : '') . '</span></label>';
+           . inc_form_open() . '<input type="hidden" name="action" value="dept_assign">';
+        foreach (inc_teams_grouped(true) as $gk => $list) {
+            echo '<fieldset class="inc-fs"><legend>' . e(inc_dept_kinds()[$gk][1]) . '</legend>';
+            foreach ($list as $tid => $tn) {
+                $n = count(inc_dept_people($tid));
+                echo '<label class="check"><input type="checkbox" name="dept[]" value="' . (int) $tid . '"' . (isset($openWith[$tid]) ? ' disabled' : '') . '> ' . e($tn)
+                   . ' <span class="muted small">' . $n . ' ' . ($n === 1 ? 'person' : 'people') . (isset($openWith[$tid]) ? ' · already has it' : '') . '</span></label>';
+            }
+            echo '</fieldset>';
         }
-        echo '</fieldset>' . inc_field('Note for the departments', inc_textarea('note', '', 2, 'placeholder="What you want them to check (optional)"'))
+        echo inc_field('Note for them', inc_textarea('note', '', 2, 'placeholder="What you want them to check (optional)"'))
            . '<button class="btn btn-primary">Assign</button></form>';
     }
-    echo '</section><section class="card"><h2>With departments</h2>';
+    echo '</section><section class="card"><h2>With departments, mentors and jury</h2>';
     if (!$with) {
         echo '<p class="muted small">Not assigned to a department yet.</p>';
     } else {
-        echo '<table class="data stack"><thead><tr><th>Department</th><th>Where it is</th><th>Assigned</th><th>Returned</th></tr></thead><tbody>';
+        echo '<table class="data stack"><thead><tr><th>With</th><th>Where it is</th><th>Assigned</th><th>Returned</th></tr></thead><tbody>';
+        $tk = inc_team_kinds();
         foreach ($with as $w) {
-            echo '<tr><td data-l="Department"><strong>' . e($w['team_name']) . '</strong></td>'
+            echo '<tr><td data-l="With"><strong>' . e($w['team_name']) . '</strong><div class="muted small">' . e(inc_dept_kinds()[$tk[(int) $w['team_id']] ?? 'department'][0]) . '</div></td>'
                . '<td data-l="Where it is">' . ($w['state'] === 'open' ? inc_badge((string) ($w['stage_name'] ?? 'Open'), 'blue') : inc_badge('Returned', 'green')) . '</td>'
                . '<td data-l="Assigned">' . e(inc_fmt_datetime($w['assigned_at'])) . '<div class="muted small">' . e($w['assigned_by']) . ($w['note'] ? ' — ' . e($w['note']) : '') . '</div></td>'
                . '<td data-l="Returned">' . ($w['state'] === 'returned' ? e(inc_fmt_datetime($w['returned_at'])) . '<div class="muted small">' . e((string) $w['returned_by']) . '</div><div>' . nl2br(e((string) $w['return_note'])) . '</div>' : '—') . '</td></tr>';

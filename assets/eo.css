@@ -1,0 +1,92 @@
+/* Event Organizers: sits on top of app.css and inc.css. Only what the event pages add.
+   Also loaded by the public event and ticket pages, which have form.css underneath. */
+
+.eo-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.eo-search { margin: 0 0 14px; }
+.wrap-page.inc .inc-apptabs { flex-wrap: wrap; }
+.wrap-page.inc .card { overflow-x: auto; }
+.wrap-page.inc .inc-grid2 > * { min-width: 0; }
+@media (max-width: 900px) {
+  .wrap-page.inc .inc-grid2 { grid-template-columns: minmax(0, 1fr); }
+}
+.eo-facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 14px; margin: 8px 0 0; font-size: 13px; }
+.eo-facts dt { color: var(--ink-mute, #6b7570); }
+.eo-facts dd { margin: 0; }
+.eo-reader { max-width: 340px; margin-bottom: 10px; }
+.eo-result { padding: 14px 16px; border-radius: 8px; border: 1px solid var(--line, #dde3df); font-size: 15px; margin-bottom: 12px; min-height: 64px; }
+.eo-result strong { display: block; font-size: 17px; }
+.eo-result.good { background: #e6f5ec; border-color: #b5dfc5; color: #14532d; }
+.eo-result.warn { background: #fdf3e0; border-color: #f1d8a6; color: #6b4600; }
+.eo-result.risk { background: #fdeaea; border-color: #f3c4c4; color: #7f1d1d; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Public pages */
+.ev-banner { display: block; width: 100%; max-height: 300px; object-fit: cover; border-radius: 10px; margin-bottom: 18px; }
+.ev-meta { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 10px 0 0; padding: 0; list-style: none; font-size: 14px; color: #4a5551; }
+.ev-apply { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 4px; }
+.ev-sec { margin-top: 26px; }
+.ev-sec h2 { font-size: 16px; margin: 0 0 10px; }
+.ev-sec p { line-height: 1.6; }
+.ev-agenda, .ev-people { list-style: none; margin: 0; padding: 0; }
+.ev-agenda li, .ev-people li { padding: 9px 0; border-bottom: 1px solid #e4e9e6; font-size: 14px; }
+.ev-agenda time { display: inline-block; min-width: 104px; color: #4a5551; font-variant-numeric: tabular-nums; }
+.ev-muted { color: #6b7570; font-size: 13px; }
+.ev-card { display: block; padding: 14px 0; border-bottom: 1px solid #e4e9e6; color: inherit; text-decoration: none; }
+.ev-card strong { display: block; font-size: 15px; }
+.ev-ticket { text-align: center; }
+.ev-ticket svg { max-width: 100%; height: auto; }
+.ev-code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; letter-spacing: .04em; color: #4a5551; word-break: break-all; }
+.ev-rate { display: flex; gap: 14px; margin: 10px 0; }
+.ev-textarea { width: 100%; box-sizing: border-box; padding: 9px; font: inherit; border: 1px solid #c9d2cd; border-radius: 6px; }
+@media print {
+  .ev-noprint { display: none; }
+}
+
+/* Public site */
+.ev-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ev-nav { display: flex; gap: 14px; flex-wrap: wrap; font-size: 14px; }
+.ev-nav a { color: #1f2a26; text-decoration: none; }
+.ev-nav a:hover { text-decoration: underline; }
+.ev-legal { text-align: center; font-size: 12.5px; color: #6b7570; }
+.ev-legal a { color: inherit; }
+.ev-filter { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.ev-filter input, .ev-filter select, .ev-row input, .ev-form input[type=text], .ev-form input[type=email], .ev-form input[type=tel], .ev-form input[type=password], .ev-form textarea { font: inherit; padding: 8px 10px; border: 1px solid #c9d2cd; border-radius: 6px; box-sizing: border-box; }
+.ev-filter input[type=search] { flex: 1 1 200px; }
+.ev-form label { display: block; margin-bottom: 10px; font-size: 14px; }
+.ev-form input[type=text], .ev-form input[type=email], .ev-form input[type=tel], .ev-form input[type=password], .ev-form textarea { display: block; width: 100%; margin-top: 3px; }
+.ev-row { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+.ev-row input { flex: 1 1 180px; }
+.ev-opt { display: block; padding: 5px 0; }
+.ev-fs { border: 0; padding: 0; margin: 0 0 10px; }
+.ev-poll { margin: 10px 0; padding: 10px; border: 1px solid #e4e9e6; border-radius: 8px; }
+.ev-bar { position: relative; margin: 6px 0; padding: 4px 8px; background: #f1f4f2; border-radius: 5px; overflow: hidden; font-size: 13px; }
+.ev-bar span { position: relative; z-index: 1; }
+.ev-bar i { position: absolute; left: 0; top: 0; bottom: 0; background: #c6e7dc; }
+.ev-up { border: 1px solid #c9d2cd; background: #fff; border-radius: 6px; padding: 1px 7px; cursor: pointer; font-size: 12px; }
+.ev-cert { text-align: center; padding: 24px 10px; }
+.ev-cert h1 { font-size: 30px; margin: 8px 0; }
+.ev-cert h2 { font-size: 20px; margin: 8px 0; }
+.ev-scroll { overflow-x: auto; }
+.ev-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ev-table th, .ev-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #e4e9e6; }
+.ev-chat-open { position: fixed; right: 16px; bottom: 16px; z-index: 20; border: 0; border-radius: 22px; padding: 10px 16px; background: #0f6e63; color: #fff; font: inherit; cursor: pointer; }
+.ev-chat-panel { position: fixed; right: 16px; bottom: 64px; z-index: 20; width: min(320px, calc(100vw - 32px)); background: #fff; border: 1px solid #d5ddd8; border-radius: 10px; padding: 10px; box-shadow: 0 6px 20px rgba(0,0,0,.14); }
+.ev-chat-log { max-height: 260px; overflow-y: auto; font-size: 13.5px; }
+.ev-chat-log p { margin: 6px 0; }
+.ev-chat-log .me { text-align: right; color: #0f6e63; }
+.ev-chat-panel form { display: flex; gap: 6px; }
+.ev-chat-panel input { flex: 1; min-width: 0; font: inherit; padding: 7px; border: 1px solid #c9d2cd; border-radius: 6px; }
+
+/* Organizer pages */
+.eo-msg { padding: 10px 0; border-bottom: 1px solid var(--line, #e4e9e6); }
+.eo-msg p { margin: 6px 0; }
+.eo-report { font-size: 13.5px; line-height: 1.55; }
+.eo-kiosk { display: flex; justify-content: center; text-align: center; padding: 30px 16px; background: #f4f6f5; }
+.eo-kiosk main { width: min(520px, 100%); }
+.eo-kiosk .eo-reader { margin: 0 auto 12px; }
+.eo-badges { margin: 12px; font-family: Arial, sans-serif; }
+.eo-sheet { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.eo-badge { border: 1px dashed #999; border-radius: 8px; padding: 12px; text-align: center; break-inside: avoid; }
+.eo-badge .ev { font-size: 11px; color: #555; }
+.eo-badge strong { display: block; font-size: 19px; margin: 6px 0 2px; }
+.eo-badge .ty { font-size: 12px; margin-bottom: 6px; }

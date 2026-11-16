@@ -51,6 +51,9 @@ function inc_workspace_need(int $id): array
 function inc_assign(int $appId, int $teamId, int $ownerId, string $reason = '', string $requestKey = ''): array
 {
     inc_need('assign');
+    if (inc_kind() === 'eo') {
+        throw new InvalidArgumentException('Event applications are not assigned for incubation.');
+    }
     $reason = inc_str($reason, 500);
     $requestKey = preg_match('/^[A-Za-z0-9]{8,64}$/', $requestKey) ? $requestKey : bin2hex(random_bytes(12));
     $eventKey = sha1('assign|' . $appId . '|' . $teamId . '|' . $ownerId . '|' . $requestKey);

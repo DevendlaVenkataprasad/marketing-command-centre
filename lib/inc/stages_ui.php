@@ -11,6 +11,9 @@
 /** Handles a stage POST from a board page. Returns the flash text, or null when $a is not a stage action. */
 function inc_stage_post(string $a): ?string
 {
+    if (inc_kind() === 'eo') {
+        throw new InvalidArgumentException('The stages belong to the main pipeline: change them in Incubation Management.');
+    }
     switch ($a) {
         case 'stage_save':
             $sid = inc_stage_save((string) ($_POST['pipeline'] ?? ''), inc_int_or_null($_POST['id'] ?? null), $_POST);
@@ -33,7 +36,7 @@ function inc_stage_post(string $a): ?string
 /** The ⋯ menu on a board column: order, and every setting of the stage. */
 function inc_stage_menu_html(array $s, string $pipe): string
 {
-    if (!inc_can('configure')) {
+    if (!inc_can('configure') || inc_kind() === 'eo') {
         return '';
     }
     return '<details class="kb-menu"><summary title="Edit this stage" aria-label="Edit stage ' . e($s['name']) . '">⋯</summary>'
@@ -92,7 +95,7 @@ function inc_stage_editor_html(array $s, string $pipe): string
 /** The last board column: add a stage, and reach the hidden (inactive, empty) ones. */
 function inc_stage_add_column_html(string $pipe, array $shownIds): string
 {
-    if (!inc_can('configure')) {
+    if (!inc_can('configure') || inc_kind() === 'eo') {
         return '';
     }
     $hidden = array_filter(inc_stages($pipe), static fn($s) => !in_array((int) $s['id'], $shownIds, true));

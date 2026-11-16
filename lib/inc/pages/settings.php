@@ -10,6 +10,9 @@ require_once __DIR__ . '/../certs.php';   // the Certificates tab's actions run 
 
 $tabs = ['forms' => 'Forms', 'devstages' => 'Development stages',
          'evaluation' => 'Evaluation templates', 'lists' => 'Lists', 'teams' => 'Departments', 'notifications' => 'Notifications', 'certificates' => 'Certificates', 'general' => 'General', 'audit' => 'Audit trail'];
+if (inc_kind() === 'eo') {
+    unset($tabs['devstages']);
+}
 // Stages are added and edited on the boards themselves now; old links land there.
 if (in_array($_GET['tab'] ?? '', ['pipeline', 'lifecycle'], true)) {
     inc_redirect($_GET['tab'] === 'pipeline' ? inc_url('applications', ['view' => 'board']) : inc_url('workspaces'));
@@ -63,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Its people: ticked from the organisation's existing team, nobody created here.
                 inc_dept_members_save($tid, (array) ($_POST['people'] ?? []));
                 inc_dept_stages($tid);                       // a new department starts with New / In progress / Completed
-                inc_redirect(inc_url('settings', ['tab' => 'teams', 'team' => $tid]), ['ok', 'Department saved.']);
+                inc_redirect(inc_url('settings', ['tab' => 'teams', 'team' => $tid]), ['ok', inc_dept_kinds()[inc_dept_kind_of(inc_team($tid))][0] . ' saved.']);
             case 'member_add':
                 inc_team_member_add((int) ($_POST['team_id'] ?? 0), (int) ($_POST['person_id'] ?? 0), (string) ($_POST['role'] ?? ''));
                 inc_redirect(inc_url('settings', ['tab' => 'teams', 'team' => (int) $_POST['team_id']]), ['ok', 'Member added.']);
@@ -182,7 +185,7 @@ if ($tab === 'forms') {
        . inc_field(inc_purpose_event_label((string) ($_POST['purpose'] ?? '')) ?: 'Event or program name',
                    '<input type="text" name="event_name" maxlength="190" value="' . e((string) ($_POST['event_name'] ?? '')) . '" placeholder="e.g. Startup Summit 2026">',
                    'The event or program this form takes applications for. Every application carries it, so you can filter and report by it.', true) . '</div>'
-       . inc_field('Assign to team', inc_select('dept_team_id', inc_teams(true), (string) ($_POST['dept_team_id'] ?? ''), 'None'),
+       . inc_field('Assign to team', inc_select('dept_team_id', inc_team_picker(), (string) ($_POST['dept_team_id'] ?? ''), 'None'),
                    'Applications always land in the main pipeline. With a team chosen, each one is also put on that team’s Department desk as it arrives and tagged with the team’s name on the board — no manual assigning. The teams listed are those under Settings → Departments.')
        . inc_field('Description shown to applicants', inc_textarea('description', '', 2))
        . '<button class="btn btn-primary">Create form</button></form></section>';
@@ -275,28 +278,40 @@ if ($tab === 'teams') {
     echo '<div class="inc-note"><strong>Departments</strong> are made from your existing team — the people on '
        . (inc_org() > 0 ? 'your My Team page' : 'Team Management') . '. Nobody is created here: give the department a name and tick its people. '
        . 'Each department has its own stages. From an application, <strong>Departments</strong> tab, assign it to one or more departments: it shows on their '
-       . '<a href="' . e(inc_url('desk')) . '">department desk</a>, and they return it to you when done, with their remarks.</div>';
+       . '<a href="' . e(inc_url('desk')) . '">department desk</a>, and they return it to you when done, with their remarks. '
+       . 'Choose the <strong>Type</strong> <em>Mentor</em> or <em>Jury</em> to make mentors or a jury the same way: they get a desk of their own (Mentor desk, Jury desk) '
+       . 'with only the applications you assign them, their own stages and Gem stages. Only you add their people and assign them work.</div>';
     echo '<div class="inc-grid2"><section class="card"><h2>Departments</h2>';
     if (!$teams) {
         echo '<p class="muted small">No departments yet. Create the first on the right.</p>';
     }
+    $kindsAll = inc_dept_kinds();
+    usort($teams, static fn($a, $b) => [array_search(inc_dept_kind_of($a), array_keys($kindsAll), true), $a['name']] <=> [array_search(inc_dept_kind_of($b), array_keys($kindsAll), true), $b['name']]);
+    $lastKind = null;
     foreach ($teams as $t) {
         $names = array_values(inc_dept_people((int) $t['id']));
+        $tk = inc_dept_kind_of($t);
+        if ($tk !== $lastKind) {
+            echo '<h3 class="inc-kindhead">' . e($kindsAll[$tk][1]) . '</h3>';
+            $lastKind = $tk;
+        }
         echo '<div class="inc-teamrow"><a href="' . e(inc_url('settings', ['tab' => 'teams', 'team' => $t['id']])) . '"><strong>' . e($t['name']) . '</strong></a>' . ((int) $t['active'] !== 1 ? ' ' . inc_badge('Inactive') : '')
            . '<div class="muted small">' . (int) $t['members'] . ' people' . ($names ? ': ' . e(implode(', ', array_slice($names, 0, 6)) . (count($names) > 6 ? '…' : '')) : '')
            . ' · ' . (int) $t['open_apps'] . ' open application' . ((int) $t['open_apps'] === 1 ? '' : 's')
-           . ' · <a href="' . e(inc_url('desk', ['dept' => $t['id']])) . '">desk</a></div></div>';
+           . ' · <a href="' . e(inc_url('desk', ['dept' => $t['id'], 'kind' => $tk])) . '">desk</a></div></div>';
     }
     $team = $teamId ? inc_team($teamId) : null;
     $spokes = inc_masters('spoke', false);
     $cur = $team ? inc_team_spokes((int) $team['id']) : [];
     $people = inc_people();
     $mine = $team ? inc_dept_people((int) $team['id']) : [];
-    echo '</section><section class="card"><h2>' . ($team ? 'Edit ' . e($team['name']) : 'New department') . '</h2>' . inc_form_open() . '<input type="hidden" name="action" value="team_save">'
+    echo '</section><section class="card"><h2>' . ($team ? 'Edit ' . e($team['name']) : 'New department, mentor or jury') . '</h2>' . inc_form_open() . '<input type="hidden" name="action" value="team_save">'
        . ($team ? '<input type="hidden" name="id" value="' . (int) $team['id'] . '">' : '')
-       . inc_field('Department name', '<input type="text" name="name" value="' . e($team['name'] ?? '') . '" maxlength="120" required placeholder="e.g. Technical Review, Legal, Finance">', '', true)
+       . inc_field('Type', inc_select('kind', array_map(static fn($k) => $k[0], inc_dept_kinds()), $team ? inc_dept_kind_of($team) : (string) ($_GET['kind'] ?? 'department'), '', 'required'),
+                   '<strong>Department</strong>: works applications and may add its own. <strong>Mentor</strong> or <strong>Jury</strong>: a desk of their own with only the applications you assign them.', true)
+       . inc_field('Name', '<input type="text" name="name" value="' . e($team['name'] ?? '') . '" maxlength="120" required placeholder="e.g. Technical Review, Legal, Mentor panel — AgriTech, Final jury">', '', true)
        . inc_field('Description', '<input type="text" name="description" value="' . e((string) ($team['description'] ?? '')) . '" maxlength="255">')
-       . '<fieldset class="inc-fs"><legend>People (from your team)</legend>';
+       . '<fieldset class="inc-fs"><legend>People (from your team) — the department’s members, the mentors or the jurors</legend>';
     if (!$people) {
         echo '<span class="muted small">There are no active people in your team yet — add them on ' . (inc_org() > 0 ? 'My Team' : 'Team Management') . ' first.</span>';
     }
@@ -309,10 +324,10 @@ if ($tab === 'teams') {
     }
     echo ($spokes ? '' : '<span class="muted small">Add spokes under Lists.</span>') . '</fieldset></details>'
        . '<label class="check"><input type="checkbox" name="active" value="1"' . (!$team || (int) $team['active'] === 1 ? ' checked' : '') . '> Active</label> '
-       . '<button class="btn btn-primary">Save department</button>' . ($team ? ' <a class="btn" href="' . e(inc_url('settings', ['tab' => 'teams'])) . '">New department</a>' : '') . '</form>';
+       . '<button class="btn btn-primary">Save</button>' . ($team ? ' <a class="btn" href="' . e(inc_url('settings', ['tab' => 'teams'])) . '">New</a>' : '') . '</form>';
     if ($team) {
         echo '<h3>Its stages</h3><p class="muted small">' . e(implode(' → ', array_column(inc_dept_stages((int) $team['id']), 'name')))
-           . ' · <a href="' . e(inc_url('desk', ['dept' => $team['id']])) . '">change them on the department desk</a></p>';
+           . ' · <a href="' . e(inc_url('desk', ['dept' => $team['id'], 'kind' => inc_dept_kind_of($team)])) . '">change them, and choose Gem stages, on its desk</a></p>';
     }
     echo '</section></div>';
 }

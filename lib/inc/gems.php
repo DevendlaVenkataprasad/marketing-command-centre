@@ -138,7 +138,7 @@ function inc_stage_gem_ids(?array $stage): array
 function inc_gem_visible_at(int $gemId, int $stageId): bool
 {
     static $cache = [];
-    $k = inc_org() . ':' . $stageId;
+    $k = inc_scope_key() . ':' . $stageId;
     if (!isset($cache[$k])) {
         $cache[$k] = inc_stage_gem_ids(inc_stage($stageId));
     }
@@ -545,7 +545,7 @@ function inc_gem_request(int $gemId, int $appId): array
 
 function inc_gem_link(array $req): string
 {
-    $o = inc_org() > 0 ? '&o=' . inc_org() : '';
+    $o = (inc_org() > 0 ? '&o=' . inc_org() : '') . inc_kind_q();
     return rtrim(fabo_portal_url_safe(), '/') . '/incubation-gem.php?t=' . $req['token'] . $o;
 }
 

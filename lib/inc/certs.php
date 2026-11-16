@@ -272,7 +272,7 @@ function inc_cert_snapshot(array $app, array $stage): array
 
 function inc_cert_link(array $c): string
 {
-    return rtrim(fabo_portal_url_safe(), '/') . '/certificate.php?c=' . $c['code'] . (inc_org() > 0 ? '&o=' . inc_org() : '');
+    return rtrim(fabo_portal_url_safe(), '/') . '/certificate.php?c=' . $c['code'] . (inc_org() > 0 ? '&o=' . inc_org() : '') . inc_kind_q();
 }
 
 /**

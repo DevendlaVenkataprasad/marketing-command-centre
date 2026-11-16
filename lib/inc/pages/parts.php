@@ -22,6 +22,7 @@ function inc_card_html(array $a): string
        . ($a['source_id'] ? ' · ' . e(inc_master_name((int) $a['source_id'])) : '') . '</div></div>'
        . '<div class="score">' . inc_score_html($a) . implode('', array_map(static fn($x) => '<div>' . inc_gem_score_html($x[0], $x[1]) . '</div>', inc_gem_scores_for_rows([$a])[$id] ?? [])) . '</div></header>'
        . '<dl class="facts">'
+       . (!empty($a['event_name']) ? '<div class="wide"><dt>Program</dt><dd>' . e((string) $a['event_name']) . '</dd></div>' : '')
        . '<div><dt>Pipeline</dt><dd>' . e($a['stage_name']) . '</dd></div>'
        . '<div><dt>Development</dt><dd>' . e($a['dev_stage'] ? (inc_dev_stages()[$a['dev_stage']] ?? $a['dev_stage']) : 'Not set') . '</dd></div>'
        . '<div><dt>Evaluation</dt><dd>' . inc_eval_badge($a['eval_status']) . '</dd></div>'
@@ -99,7 +100,12 @@ function inc_bulk_panel(array $f, int $total, string $selKey, array $criteria = 
     $more = [];
     if (inc_can('assign')) {
         $more[] = ['owner', 'Set team and owner'];
-        $more[] = ['assign', 'Assign for incubation'];
+        if (inc_kind() !== 'eo') {
+            $more[] = ['assign', 'Assign for incubation'];
+            if (inc_teams(true)) {
+                $more[] = ['dept_assign', 'Assign to department / mentor / jury'];
+            }
+        }
     }
     if ($edit) {
         $more[] = ['type', 'Set applicant type'];
@@ -110,7 +116,7 @@ function inc_bulk_panel(array $f, int $total, string $selKey, array $criteria = 
     }
     $downloads = inc_can('export') ? [['export_xlsx', 'Excel — list, answers, Gem scores'], ['export_full', 'PDF — full report of each'], ['export_pdf', 'PDF — summary list']] : [];
     $titles = ['gem_send' => 'Email a Gem form', 'scorecard' => 'Email each applicant their score card', 'email' => 'Send an email', 'stage' => 'Move to another stage', 'cert_send' => 'Send a certificate for the stage each one has reached', 'owner' => 'Set team and owner',
-               'assign' => 'Assign for incubation', 'eval_task' => 'Create evaluation tasks', 'type' => 'Set the applicant type', 'delete' => 'Delete the selected applications'];
+               'assign' => 'Assign for incubation', 'dept_assign' => 'Assign to a department, mentors or jury', 'eval_task' => 'Create evaluation tasks', 'type' => 'Set the applicant type', 'delete' => 'Delete the selected applications'];
     $opts = '';
     foreach (array_merge($main, $more, $downloads) as [$k, $l]) {
         $opts .= '<option value="' . e($k) . '">' . e($l) . '</option>';
@@ -146,6 +152,9 @@ function inc_bulk_panel(array $f, int $total, string $selKey, array $criteria = 
        . '<label data-for="stage"><span>Move to</span>' . inc_select('stage_id', inc_stage_map('crm', true), '', 'Choose stage') . '</label>'
        . '<label data-for="owner assign"><span>Team</span>' . inc_select('team_id', inc_teams(), '', 'Choose team') . '</label>'
        . '<label data-for="owner assign"><span>Owner</span>' . inc_select('owner_id', inc_people_with_role(), '', 'Choose owner') . '</label>'
+       . '<label data-for="dept_assign"><span>Assign to</span>' . inc_select('dept_team', inc_team_picker(), '', 'Choose department, mentor or jury') . '</label>'
+       . '<label data-for="dept_assign" class="grow"><span>Note for them (optional)</span><input type="text" name="dept_note" maxlength="2000" placeholder="What you want them to check"></label>'
+       . '<p class="muted small" data-for="dept_assign">Each one goes on their desk at their first stage; the pipeline stage is unchanged. Their members get one email with the count. Ones they already hold are left as they are.</p>'
        . '<label data-for="eval_task"><span>Task</span><input type="text" name="title" value="Evaluate application"></label>'
        . '<label data-for="eval_task"><span>Evaluator</span>' . inc_select('assignee_id', inc_people_with_role('evaluator'), '', 'Unassigned') . '</label>'
        . '<label data-for="eval_task"><span>Due</span><input type="date" name="due_date"></label>'
@@ -263,6 +272,12 @@ function inc_bulk_handle(string $backUrl): ?array
             }
             $r = inc_gem_send((int) ($_POST['gem_id'] ?? 0), $ids);
             inc_redirect($backUrl, [$r['failed'] ? 'err' : 'ok', inc_gem_send_summary($r)]);
+        }
+        if ($action === 'dept_assign') {
+            $r = inc_dept_assign_many($ids, [(int) ($_POST['dept_team'] ?? 0)], (string) ($_POST['dept_note'] ?? ''));
+            $to = inc_team_name((int) ($_POST['dept_team'] ?? 0));
+            inc_redirect($backUrl, ['ok', $r['done'] . ' application' . ($r['done'] === 1 ? '' : 's') . ' assigned to ' . $to . '.'
+                                       . ($r['already'] ? ' ' . $r['already'] . ' already with them.' : '')]);
         }
         $params = $_POST;
         $params['criteria'] = inc_screen_criteria((array) ($_POST['crit'] ?? []));

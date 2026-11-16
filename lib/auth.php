@@ -856,6 +856,17 @@ function fabo_modules(): array
             'team'  => ['Incubation Management',
                         'Owner: runs your Incubation Management as you do — applications, screening, evaluation, workspaces, forms and settings. View only: reads and exports it.'],
         ],
+        /* Their organisation's OWN Event Organizers (lib/eo on the lib/inc engine,
+           tables eo_o<their id>_*): the events their committees approved, with
+           forms, the application board, tickets and check-in. Separate from
+           Incubation Management in both its data and who holds it. */
+        'organizers' => [
+            'label' => 'Event Organizers — their own',
+            'page'  => 'organizers.php',
+            'hint'  => 'Run their approved events: application forms and the pipeline, a public page, tickets, check-in, agenda and feedback.',
+            'team'  => ['Event Organizers',
+                        'Owner: runs your approved events as you do — forms, applications, public pages, tickets, check-in and settings. View only: reads and exports them.'],
+        ],
         /* Their organisation's OWN IT desk and facilities desk (lib/it, tables
            it_o<id>_* / fa_o<id>_*). Can edit runs it; View only reads it.
            They may pass either to their own team, never more than they hold. */
@@ -875,6 +886,26 @@ function fabo_modules(): array
             'hint'  => 'Run their co-working centres: desks and cabins, startups, rent and dues, renewals, waiting list and the seat map.',
             'team'  => ['Co-working Space',
                         'Owner: runs your co-working centres as you do — spaces, startups, rent and dues, renewals, waiting list, monthly log and imports. View only: reads every centre\'s dashboards, seat map and registers.'],
+        ],
+        /* Their organisation's own Digital Signatures (lib/ds, rows by org_id):
+           documents sent for signature, workflows, eSign / DSC, verification and
+           the audit trail. Can edit runs it; View only reads it. Everyone in the
+           organisation signs what is addressed to them either way. */
+        'esign' => [
+            'label' => 'Digital Signatures — their own',
+            'page'  => 'sign.php',
+            'hint'  => 'Send documents for signature and run the full signing lifecycle: workflows, Aadhaar eSign and DSC, verification, reports and the audit trail.',
+            'team'  => ['Digital Signatures',
+                        'Owner: runs Digital Signatures as you do — every document, workflow, signatory, provider and setting. View only: reads every document and report. Without it they still sign what is sent to them; finer roles are given in Digital Signatures → Roles.'],
+        ],
+        /* The CEO Dashboard (lib/ceo): an executive view across the modules their
+           organisation holds. Ticking it here only switches it on for the
+           organisation's head; nobody else sees it until the head names them on
+           its Access page, so it is deliberately not a 'team' module. */
+        'ceo' => [
+            'label' => 'CEO Dashboard',
+            'page'  => 'ceo.php',
+            'hint'  => 'Live executive overview across their modules, hub and spokes, targets and reports. Only the head has it until they grant it to named people.',
         ],
         'facilities' => [
             'label' => 'Admin & Facilities — their own',

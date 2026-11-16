@@ -360,9 +360,12 @@ function fabo_head(array $viewer, string $title, string $current = ''): void
       echo '<link rel="stylesheet" href="' . e(fabo_asset($hc)) . '">' . "\n";
   }
   // So do Incubation Management desks.
-  if (str_starts_with($current, 'inc-') || str_starts_with($current, 'it-') || str_starts_with($current, 'fa-') || in_array($current, ['mywork', 'people-team'], true)) {   // My Work and My Team carry incubation tiles and bars
+  if (str_starts_with($current, 'inc-') || str_starts_with($current, 'eo-') || str_starts_with($current, 'it-') || str_starts_with($current, 'fa-') || in_array($current, ['mywork', 'people-team'], true)) {   // My Work and My Team carry incubation tiles and bars
       $ic = $viewer['is_admin'] ? '../assets/inc.css' : 'assets/inc.css';
       echo '<link rel="stylesheet" href="' . e(fabo_asset($ic)) . '">' . "\n";
+  }
+  if (str_starts_with($current, 'eo-')) {
+      echo '<link rel="stylesheet" href="' . e(fabo_asset($viewer['is_admin'] ? '../assets/eo.css' : 'assets/eo.css')) . '">' . "\n";
   }
 ?>
 </head>
@@ -493,6 +496,11 @@ function fabo_head(array $viewer, string $title, string $current = ''): void
                  . e(fabo_sheet_label($key))
                  . ($perm === 'view' && $key !== 'dashboard' ? ' <span class="ro">view</span>' : '') . '</a>';
         };
+        // The CEO Dashboard leads the menu, for those given it.
+        if ($viewer['is_admin'] || fabo_signed_in()) {
+            require_once __DIR__ . '/ceo/nav.php';
+            echo ceo_nav_html($viewer, $current);
+        }
         /* Marketing Management: the marketing sheets under one heading, drawn
            where the first of them would have been. Open while one of them is
            the page; a click opens or closes it. */
@@ -518,12 +526,16 @@ function fabo_head(array $viewer, string $title, string $current = ''): void
         require_once __DIR__ . '/inc/nav.php';
         if ($viewer['is_admin']) {
             echo hr_nav_html($viewer, $current);
-            echo inc_nav_html($current);
+            echo inc_nav_html($current, true, false, $viewer);
+            require_once __DIR__ . '/eo/nav.php';
+            echo eo_nav_html($current);
             require_once __DIR__ . '/it/nav.php';
             echo it_nav_html($current, 'it');             // IT Management
             echo it_nav_html($current, 'fa');             // Admin & Facilities
             require_once __DIR__ . '/cw/nav.php';
             echo cw_nav_html($current);                 // Co-working Space
+            require_once __DIR__ . '/ds/nav.php';
+            echo ds_nav_html($viewer, $current);       // Digital Signatures
         } elseif (fabo_signed_in()) {
             // HR appears only for someone the administrator has given an HR role.
             echo hr_nav_html($viewer, $current);
@@ -547,11 +559,19 @@ function fabo_head(array $viewer, string $title, string $current = ''): void
             if ($cwGrant !== 'none' || cw_assigned($viewer)) {
                 echo cw_nav_html($current, $cwGrant === 'edit', $cwGrant !== 'none');
             }
+            // Digital Signatures: everyone in an organisation that holds it signs what is sent to them.
+            require_once __DIR__ . '/ds/nav.php';
+            echo ds_nav_html($viewer, $current);
             $incGrant = inc_grant($viewer);
             if ($incGrant !== 'none') {
-                echo inc_nav_html($current, $incGrant === 'edit');
+                echo inc_nav_html($current, $incGrant === 'edit', false, $viewer);
             } elseif (inc_desk_member($viewer)) {
-                echo inc_nav_html($current, false, true);   // a department member: their desk only
+                echo inc_nav_html($current, false, true, $viewer);   // a department member: their desk only
+            }
+            require_once __DIR__ . '/eo/nav.php';
+            $eoGrant = eo_grant($viewer);
+            if ($eoGrant !== 'none' || eo_desk_member($viewer)) {
+                echo eo_nav_html($current, $eoGrant === 'edit', $eoGrant !== 'none');
             }
         }
         /* Finance sits with the work too, under Main Menu: the Finance Portal
@@ -688,6 +708,8 @@ function fabo_nav_icons(): array
         'monitor'  => '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
         'building' => '<rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2M10 21v-3h4v3"/>',
         'doc'      => '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+        'pulse'    => '<path d="M3 12h4l2.5-7 4 14 2.5-7h5"/>',
+        'sign'     => '<path d="M3 17c3-1 4-6 6-6s1 5 3 5 3-4 5-4 2 3 4 3"/><path d="M3 21h18"/>',
         'cowork'   => '<circle cx="8" cy="6" r="2.2"/><circle cx="16" cy="6" r="2.2"/><path d="M4.5 13a3.5 3.5 0 0 1 7 0M12.5 13a3.5 3.5 0 0 1 7 0"/><rect x="2.5" y="13" width="19" height="2.6" rx="1"/><path d="M5 15.6V21M19 15.6V21"/>',
     ];
 }

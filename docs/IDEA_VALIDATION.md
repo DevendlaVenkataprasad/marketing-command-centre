@@ -21,7 +21,7 @@ Heads of Department (HoDs) validate their students' ideas with the Gem the owner
 
 **Head of Department** (sees only their own department):
 - **Share the form.** Copy the link, or share it on WhatsApp or by email.
-- **Edit the questions.** The owner's (Gem) questions are locked, marked "Set by the owner": a HoD cannot reword, remove or make them optional, because they are what the AI scores. `iv_form_save()` always rebuilds them from the round's Gem (`iv_form_locked_questions()`) and ignores anything posted for them. HoDs can add, edit and remove their own questions after them. The form can be paused.
+- **Edit the questions.** The owner's (Gem) questions are locked, marked "Set by the owner": they are the only questions on a form. A HoD cannot reword, remove, make optional or add a question, because they are what the AI scores. `iv_form_save()` always rebuilds them from the round's Gem (`iv_form_locked_questions()`) and ignores anything posted for them. Posted question rows are ignored altogether; a HoD changes only the title, the note to students and pausing.
 - **Check an idea with AI**, in either of two ways. Both count towards the limit:
   - **In the portal** ("Check this idea now"). Gemini is called with our key. A busy or unreadable reply is not counted.
   - **Your own AI tool** (only when the round allows it). "Copy & open Gemini / ChatGPT" puts the prompt on the clipboard and opens the tool. The HoD pastes the whole reply back; the page reads the marks as they paste and shows the total before they save. Marks cannot be typed in.

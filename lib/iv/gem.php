@@ -457,9 +457,9 @@ function iv_gem_forms(int $org, int $gemId): array
 
 /**
  * Puts a Gem's current questions on the department forms of the rounds using
- * it. The Gem's questions are replaced (reworded, added, removed); a HoD's
- * own questions stay, after them. Ideas already sent keep their answers as
- * they were given. Returns the number of forms changed.
+ * it: each form then asks exactly the Gem's questions (HoDs add none).
+ * Ideas already sent keep their answers as they were given. Returns the
+ * number of forms changed.
  */
 function iv_gem_sync_forms(int $org, int $gemId): int
 {
@@ -473,8 +473,7 @@ function iv_gem_sync_forms(int $org, int $gemId): int
     }
     $n = 0;
     foreach (iv_gem_forms($org, $gemId) as $f) {
-        $own = array_values(array_filter(iv_form_questions($f), static fn($q) => empty($q['gem'])));
-        $json = json_encode(array_slice(array_merge($fresh, $own), 0, 30), JSON_UNESCAPED_UNICODE);
+        $json = json_encode($fresh, JSON_UNESCAPED_UNICODE);
         if ($json !== $f['questions_json']) {
             fabo_exec('UPDATE iv_forms SET questions_json = ? WHERE id = ? AND org_id = ?', 'sii', [$json, (int) $f['id'], $org]);
             $n++;
@@ -492,7 +491,7 @@ function iv_gem_forms_behind(int $org, int $gemId, array $gem): array
     $behind = 0;
     foreach (iv_gem_forms($org, $gemId) as $f) {
         $total++;
-        $have = array_map($sig, array_values(array_filter(iv_form_questions($f), static fn($q) => !empty($q['gem']))));
+        $have = array_map($sig, iv_form_questions($f));      // any question a HoD added also makes it behind
         if ($have !== $want) {
             $behind++;
         }

@@ -321,8 +321,9 @@ eq(count($qs), 4, 'a department form starts with the Gem\'s 4 questions');
 ok(!empty($qs[0]['gem']) && $qs[0]['required'], 'Gem questions are marked and required');
 eq(iv_form_for(A, $round, $cm)['id'], $form['id'], 'one form per department per round');
 
-// The owner's (Gem) questions are locked: a HoD's rewording, removal or optional tick is ignored; their own question is added.
+// The questions are the owner's alone: a HoD cannot reword, make optional, remove or add one. Title, note and pause still save.
 $ownerLabel = $qs[0]['label'];
+$ownerQs = json_encode($qs);
 $rows = array_map(static fn($q) => ['uid' => $q['uid'], 'label' => $q['label'], 'help' => $q['help'], 'type' => $q['type'], 'required' => 1], $qs);
 $rows[0]['label'] = 'What problem are you solving?';
 $rows[1]['required'] = 0;
@@ -331,19 +332,23 @@ $rows[] = ['uid' => '', 'label' => 'Team size', 'type' => 'number', 'required' =
 iv_form_save(A, (int) $form['id'], 'CM ideas', 'Hello students', $rows, true);
 $form = iv_form_for(A, $round, $cm);
 $fq = iv_form_questions($form);
-eq([count($fq), $fq[0]['label'], (bool) $fq[0]['gem'], $fq[1]['type'], $fq[1]['required'], $fq[4]['label'], $fq[4]['gem']], [5, $ownerLabel, true, $qs[1]['type'], true, 'Team size', false],
-   'the owner\'s questions stay as the owner wrote them; the HoD\'s own one is added');
+eq([count($fq), json_encode($fq), $form['title'], $form['intro']], [4, $ownerQs, 'CM ideas', 'Hello students'], 'rewording, an optional tick and an added question are ignored; title and note are saved');
 $drop = $rows;
 array_shift($drop);
 $drop[0]['uid'] = 'g_forged';
-iv_form_save(A, (int) $form['id'], 'CM ideas', 'Hello students', $drop, true);
-$fq = iv_form_questions(iv_form_for(A, $round, $cm));
-eq([count($fq), $fq[0]['label'], count(array_filter($fq, static fn($q) => !empty($q['gem'])))], [5, $ownerLabel, 4], 'leaving an owner\'s question out, or forging one, changes nothing');
-iv_form_save(A, (int) $form['id'], 'CM ideas', 'Hello students', [['uid' => $fq[4]['uid'], 'label' => 'Team size (max 4)', 'type' => 'number']], true);
-$fq = iv_form_questions(iv_form_for(A, $round, $cm));
-eq([count($fq), $fq[4]['label'], $fq[4]['uid']], [5, 'Team size (max 4)', $fq[4]['uid']], 'a HoD edits their own question, keeping its uid');
+iv_form_save(A, (int) $form['id'], 'CM ideas', 'Hello students', $drop, false);
+$form = iv_form_for(A, $round, $cm);
+eq([json_encode(iv_form_questions($form)), (int) $form['is_open']], [$ownerQs, 0], 'leaving a question out or forging one changes nothing; pausing works');
+iv_form_save(A, (int) $form['id'], 'CM ideas', 'Hello students', [], true);
+eq(json_encode(iv_form_questions(iv_form_for(A, $round, $cm))), $ownerQs, 'a save with no questions keeps the owner\'s');
 $formHtml = (static function () use ($fq) { $h = ''; foreach ($fq as $n => $q) { $h .= iv_portal_q_row((string) $n, $q); } return $h; })();
-ok(substr_count($formHtml, 'Set by the owner') === 4 && !preg_match('/name="q\[[0-3]\]/', $formHtml) && str_contains($formHtml, 'name="q[4][label]"'), 'the HoD form shows the owner\'s questions with no inputs');
+ok(substr_count($formHtml, 'Set by the owner') === 4 && !str_contains($formHtml, 'name="q['), 'the HoD form shows the questions with no inputs');
+$_GET = [];
+$GLOBALS['iv_porg'] = A;
+ob_start();
+iv_portal_view_form(A, iv_hod(A, (int) iv_hod_for_dept(A, $cm)['id']), iv_department(A, $cm), $round);
+$formPage = ob_get_clean();
+ok(!str_contains($formPage, 'data-addq') && !str_contains($formPage, 'Add a question') && str_contains($formPage, 'name="title"') && str_contains($formPage, 'name="is_open"'), 'no "Add a question" on the HoD form page; title, note and pause remain');
 
 /* ================================================================= ideas */
 $ans = [];
@@ -641,11 +646,11 @@ eq([count($g1b['fields']), $g1b['fields'][0]['label'], $g1b['fields'][0]['uid'],
 [$tot1, $behind1] = iv_gem_forms_behind(A, (int) $gem['id'], $g1b);
 ok($behind1 === $tot1 && $tot1 > 0, 'the forms are now behind the Gem');
 $formCm = iv_form_for(A, $round, $cm);
-$ownBefore = array_values(array_filter(iv_form_questions($formCm), static fn($q) => empty($q['gem'])));
+fabo_exec('UPDATE iv_forms SET questions_json = ? WHERE id = ?', 'si', [json_encode(array_merge(iv_form_questions($formCm), [['uid' => 'q_old1', 'label' => 'Old HoD question', 'type' => 'long', 'required' => false, 'gem' => false]])), (int) $formCm['id']]);
 eq(iv_gem_sync_forms(A, (int) $gem['id']), $tot1, 'every form of the round is updated');
 $qsAfter = iv_form_questions(iv_form_for(A, $round, $cm));
-eq([count(array_filter($qsAfter, static fn($q) => !empty($q['gem']))), $qsAfter[0]['label'], array_values(array_filter($qsAfter, static fn($q) => empty($q['gem'])))],
-   [5, 'Which problem do you solve, for whom?', $ownBefore], 'the form asks the 5 Gem questions; the HoD\'s own question stays');
+eq([count($qsAfter), count(array_filter($qsAfter, static fn($q) => !empty($q['gem']))), $qsAfter[0]['label']],
+   [5, 5, 'Which problem do you solve, for whom?'], 'the form asks exactly the 5 Gem questions; an old HoD question is gone');
 eq(iv_gem_forms_behind(A, (int) $gem['id'], $g1b)[1], 0, 'no form is behind after the update');
 eq(iv_gem_sync_forms(A, (int) $gem['id']), 0, 'updating again changes nothing');
 ok(str_contains(iv_idea_answers(iv_idea(A, $i1))[0]['label'] ?? '', 'problem') || count(iv_idea_answers(iv_idea(A, $i1))) > 0, 'an idea already sent keeps its answers');

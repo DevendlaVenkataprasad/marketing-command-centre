@@ -529,7 +529,7 @@ function iv_portal_view_form(int $org, array $me, array $dept, ?array $round): v
     $qs = iv_form_questions($form);
     $url = iv_form_url($org, $form['token']);
     echo '<section class="iv-card"><div class="iv-card-h"><h2>Idea form · ' . e($round['name']) . '</h2><a class="btn btn-sm" href="' . e($url) . '" target="_blank" rel="noopener">Preview ↗</a></div>'
-       . '<p class="muted">Students also give their name, PIN / roll number, email, phone and an idea title. Questions marked <span class="iv-pill g-team">Set by the owner</span> are what the AI scores: they stay exactly as the owner wrote them. You can add your own questions below them.</p>'
+       . '<p class="muted">Students also give their name, PIN / roll number, email, phone and an idea title. The questions are <span class="iv-pill g-team">Set by the owner</span>: they are what the AI scores, so they cannot be added to or changed here. You can change the title and the note to students, or pause the form.</p>'
        . iv_copy($url) . '</section>';
     echo '<form method="post" class="iv-form iv-card" id="formBuilder">' . fabo_csrf_field() . '<input type="hidden" name="a" value="form-save"><input type="hidden" name="round" value="' . (int) $round['id'] . '">'
        . '<label class="field"><span>Title</span><input name="title" maxlength="190" value="' . e($form['title']) . '"></label>'
@@ -538,31 +538,17 @@ function iv_portal_view_form(int $org, array $me, array $dept, ?array $round): v
     foreach ($qs as $n => $q) {
         echo iv_portal_q_row((string) $n, $q);
     }
-    echo '</ol><template id="qTpl">' . iv_portal_q_row('__N__', ['uid' => '', 'label' => '', 'help' => '', 'type' => 'long', 'required' => false, 'gem' => false]) . '</template>'
-       . '<button type="button" class="btn btn-sm" data-addq>+ Add a question</button>'
+    echo '</ol>'
        . '<label class="iv-check"><input type="checkbox" name="is_open" value="1"' . ((int) $form['is_open'] ? ' checked' : '') . '> Accepting ideas (untick to pause the form)</label>'
        . '<div class="iv-actions"><button class="btn btn-primary">Save form</button></div></form>';
 }
 
 function iv_portal_q_row(string $n, array $q): string
 {
-    $gem = !empty($q['gem']);
-    if ($gem) {
-        // The owner's question: shown, never sent back, so it cannot be changed here.
-        return '<li class="iv-q gem locked"><div class="iv-qlock"><span class="iv-pill g-team">Set by the owner</span> <span class="muted sm">' . e(iv_question_types()[$q['type'] ?? 'long'] ?? 'Paragraph')
-             . (!empty($q['required']) ? ' · required' : ' · optional') . '</span></div><strong>' . e($q['label']) . '</strong>'
-             . (trim((string) ($q['help'] ?? '')) !== '' ? '<p class="muted sm">' . nl2br(e((string) $q['help'])) . '</p>' : '') . '</li>';
-    }
-    $h = '<li class="iv-q' . ($gem ? ' gem' : '') . '"><input type="hidden" name="q[' . e($n) . '][uid]" value="' . e((string) $q['uid']) . '"><div class="iv-fields">'
-       . '<label class="field wide"><span>Question ' . ($gem ? '<span class="iv-pill g-team">Gem</span>' : '') . '</span><input name="q[' . e($n) . '][label]" maxlength="255" value="' . e($q['label']) . '"' . ($gem ? ' required' : '') . '></label>'
-       . '<label class="field wide"><span>Help for the student</span><textarea name="q[' . e($n) . '][help]" rows="2" maxlength="1000">' . e((string) ($q['help'] ?? '')) . '</textarea></label>'
-       . '<label class="field"><span>Answer type</span><select name="q[' . e($n) . '][type]">';
-    foreach (iv_question_types() as $k => $l) {
-        $h .= '<option value="' . $k . '"' . (($q['type'] ?? 'long') === $k ? ' selected' : '') . '>' . e($l) . '</option>';
-    }
-    $h .= '</select></label><label class="iv-check"><input type="checkbox" name="q[' . e($n) . '][required]" value="1"' . (!empty($q['required']) ? ' checked' : '') . ($gem ? ' disabled' : '') . '> Required</label></div>'
-        . ($gem ? '' : '<button type="button" class="btn btn-sm iv-qdel" data-delq>Remove</button>') . '</li>';
-    return $h;
+    // Every question on a HoD's form is the owner's: shown, never sent back, so nothing can be changed here.
+    return '<li class="iv-q gem locked"><div class="iv-qlock"><span class="iv-pill g-team">Set by the owner</span> <span class="muted sm">' . e(iv_question_types()[$q['type'] ?? 'long'] ?? 'Paragraph')
+         . (!empty($q['required']) ? ' · required' : ' · optional') . '</span></div><strong>' . e($q['label']) . '</strong>'
+         . (trim((string) ($q['help'] ?? '')) !== '' ? '<p class="muted sm">' . nl2br(e((string) $q['help'])) . '</p>' : '') . '</li>';
 }
 
 function iv_portal_view_idea(int $org, array $me, array $dept, ?array $round): void

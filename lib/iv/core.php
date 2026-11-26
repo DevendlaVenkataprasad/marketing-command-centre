@@ -1998,10 +1998,11 @@ function iv_form_by_token(string $token): ?array
 }
 
 /**
- * Saves a form's title, intro and questions. $rows: [[uid, label, help, type, required], ...].
- * The owner's questions (the Gem's: what the AI scores) are locked: they are
- * always the round's Gem as the owner set it, first on the form, whatever is
- * posted for them. A HoD only adds, edits and removes their own questions.
+ * Saves a form's title, note to students and open/paused state. The questions
+ * are the owner's alone: always the round's Gem as the owner set it
+ * (iv_form_locked_questions()). A HoD cannot add, change or remove a
+ * question, so $rows is ignored. A round with no Gem keeps the form's
+ * questions as they are.
  */
 function iv_form_save(int $org, int $formId, string $title, string $intro, array $rows, bool $open): void
 {
@@ -2009,39 +2010,7 @@ function iv_form_save(int $org, int $formId, string $title, string $intro, array
     if (!$f) {
         throw new InvalidArgumentException('That form is not in this organisation.');
     }
-    $old = [];
-    foreach (iv_form_questions($f) as $q) {
-        $old[$q['uid']] = $q;
-    }
-    $locked = iv_form_locked_questions($org, $f);
-    $qs = $locked;
-    $seen = [];
-    foreach ($locked as $q) {
-        $seen[$q['uid']] = true;
-    }
-    foreach ($rows as $r) {
-        $label = iv_clean($r['label'] ?? '', 255);
-        $uid = preg_replace('/[^a-z0-9_]/', '', (string) ($r['uid'] ?? ''));
-        if ($uid !== '' && (!empty($old[$uid]['gem']) || str_starts_with($uid, 'g_'))) {
-            continue;                       // an owner's question: never changed here
-        }
-        if ($label === '') {
-            continue;
-        }
-        if ($uid === '' || !isset($old[$uid]) || isset($seen[$uid])) {
-            $uid = 'q_' . bin2hex(random_bytes(4));
-        }
-        $seen[$uid] = true;
-        $qs[] = ['uid' => $uid, 'label' => $label, 'help' => iv_text($r['help'] ?? '', 1000),
-                 'type' => isset(iv_question_types()[$r['type'] ?? '']) ? $r['type'] : 'long',
-                 'required' => !empty($r['required']), 'gem' => false];
-    }
-    if (!$qs) {
-        throw new InvalidArgumentException('Keep at least one question.');
-    }
-    if (count($qs) > 30) {
-        throw new InvalidArgumentException('A form takes up to 30 questions.');
-    }
+    $qs = iv_form_locked_questions($org, $f) ?: iv_form_questions($f);
     $title = iv_clean($title, 190) ?: $f['title'];
     fabo_exec('UPDATE iv_forms SET title = ?, intro = ?, questions_json = ?, is_open = ? WHERE id = ?', 'sssii',
               [$title, iv_text($intro, 3000), json_encode($qs, JSON_UNESCAPED_UNICODE), $open ? 1 : 0, $formId]);

@@ -78,21 +78,15 @@ function ds_org_grant(int $org): string
     if ($org < 0) {
         return 'none';
     }
-    $r = fabo_one('SELECT a.permission FROM clients c JOIN client_sheet_access a ON a.client_id = c.id AND a.sheet_key = "esign"
-                   WHERE c.id = ? AND c.kind = "client" AND c.parent_id IS NULL AND c.revoked_at IS NULL', 'i', [$org]);
-    $p = (string) ($r['permission'] ?? 'none');
-    return in_array($p, ['view', 'edit'], true) ? $p : 'none';
+    // Any client, a client's own client too, capped by every client above it.
+    return fabo_head_module_permission($org, 'esign');
 }
 
 /** Organisations with the module, for the administrator's switcher: id => name. */
 function ds_orgs_available(): array
 {
     $out = [0 => defined('APP_NAME') ? APP_NAME : 'Our organisation'];
-    foreach (fabo_all('SELECT c.id, COALESCE(NULLIF(c.organisation, ""), c.name) n FROM clients c JOIN client_sheet_access a ON a.client_id = c.id AND a.sheet_key = "esign"
-                       WHERE c.kind = "client" AND c.parent_id IS NULL AND c.revoked_at IS NULL AND a.permission IN ("view","edit") ORDER BY n') as $r) {
-        $out[(int) $r['id']] = (string) $r['n'];
-    }
-    return $out;
+    return $out + fabo_module_orgs('esign');
 }
 
 function ds_org_name(?int $org = null): string

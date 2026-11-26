@@ -32,8 +32,6 @@ if (!fabo_may_make($viewer['client'] ?? null)) {
 $me    = $viewer['client'];
 $meId  = (int) $me['id'];
 $cap   = fabo_delegatable($viewer);
-$modCap = fabo_delegatable_modules($me);   // the modules they hold that may pass to their own team (fabo_modules()['team'])
-$modLabels = fabo_child_module_labels();   // name and description of each, from fabo_modules()
 $flash = null;
 
 // Which desk. When a particular person is open, the desk follows them, so a
@@ -46,6 +44,11 @@ if (!empty($_GET['id'])) {
     }
 }
 $isTeamDesk = $kind === 'team';
+/* The modules they hold that they may pass on: to their team, to run inside
+   their organisation; to a client of their own, as that client's own separate
+   module (plus the CEO Dashboard). Never more than they hold now. */
+$modCap = fabo_delegatable_modules($me, $kind);
+$modLabels = fabo_child_module_labels($kind);
 /* Held separately, so checked separately. Somebody given clients and not team
    can type ?kind=team into the address bar, and the answer has to be the same
    as the answer the navigation gives. */
@@ -157,7 +160,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             fabo_save_rights($newId, $_POST, $me);   // capped at what I hold
             if ($kind === 'team') {                  // CRMs are shared with their own team only
                 fabo_crm_save_access($newId, $_POST, $crmBoards, $crmAllowed);
-                $access += fabo_save_child_modules($newId, (array) ($_POST['perm'] ?? []), $modCap);
+            }
+            if ($modCap) {                           // a team member's, or a client's own separate modules
+                $access += fabo_save_child_modules($newId, (array) ($_POST['perm'] ?? []), $modCap, $kind);
             }
 
             /* A password, issued now and printed in the message. The sign-in page
@@ -200,9 +205,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $after  = fabo_save_child_access($id, (array) ($_POST['perm'] ?? []), $cap);
                 if ($child['kind'] === 'team') {        // CRMs are shared with their own team only
                     fabo_crm_save_access($id, $_POST, $crmBoards, $crmAllowed);
-                    if ($modCap || array_intersect_key($before, array_flip(fabo_child_module_keys()))) {
-                        $after += fabo_save_child_modules($id, (array) ($_POST['perm'] ?? []), $modCap);
-                    }
+                }
+                if ($modCap || array_intersect_key($before, array_flip(fabo_child_module_keys($kind)))) {
+                    $after += fabo_save_child_modules($id, (array) ($_POST['perm'] ?? []), $modCap, $kind);
                 }
                 /* No longer a committee member: off this organisation's
                    committees, which are decided again without them. */
@@ -495,9 +500,10 @@ fabo_head($viewer, $deskTitle, $deskNav);
         <div class="hint">You can only pass on what you hold yourself. Asking someone to approve a
           particular row is done from that row's review panel on the sheet.</div>
       </div>
-      <?php if ($isTeamDesk && $modCap): ?>
+      <?php if ($modCap): ?>
       <div class="field">
         <label>Modules they can run</label>
+        <?php if (!$isTeamDesk): ?><div class="hint">Each is this client's own, with its own data, separate from yours. They can never hold more than you do.</div><?php endif; ?>
         <table class="data accesstable">
           <thead><tr><th>Module</th><th>No access</th><th>View only</th><th>Owner</th></tr></thead>
           <tbody>
@@ -788,10 +794,12 @@ fabo_head($viewer, $deskTitle, $deskNav);
         <?php endif; ?>
       </div>
 
-      <?php if ($isTeamDesk && $modCap): ?>
+      <?php if ($modCap): ?>
       <div class="formsec">
         <h3>Modules they can run</h3>
-        <p class="lead">For your own company. They open it from their own dashboard menu.</p>
+        <p class="lead"><?= $isTeamDesk
+            ? 'For your own company. They open it from their own dashboard menu.'
+            : 'Each is this client’s own, with its own data, separate from yours. They open it from their own dashboard menu, and can never hold more than you do.' ?></p>
         <div class="sheetgrid">
         <?php foreach ($modCap as $key => $mine): ?>
           <div class="row" title="<?= e($modLabels[$key][1]) ?>">

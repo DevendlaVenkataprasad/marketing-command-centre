@@ -38,7 +38,15 @@ function fabo_logo_ours(): void
 $formToken = (string) ($_GET['f'] ?? '');
 $applyToken = (string) ($_GET['a'] ?? '');
 $cwToken = (string) ($_GET['cw'] ?? '');
-if (!empty($_GET['h'])) {
+$eduKey = (string) ($_GET['edu'] ?? '');
+if ($eduKey !== '') {
+    // The Campus portal (campus.php): the organisation whose portal key it is.
+    require_once __DIR__ . '/lib/edu/core.php';
+    $org = edu_org_by_key($eduKey);
+    if ($org === null || $org <= 0) {
+        fabo_logo_ours();
+    }
+} elseif (!empty($_GET['h'])) {
     // An organisation's own address (lib/orghost.php): the mark of the organisation it belongs to.
     $org = fabo_request_org();
     if ($org <= 0) {

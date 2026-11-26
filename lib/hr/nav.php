@@ -15,7 +15,7 @@ function hr_nav_person_has_access(array $viewer): bool
         return false;
     }
     try {
-        $org = fabo_viewer_org($viewer);
+        $org = fabo_module_org_of($viewer);
         // The HR module: a client's own company, or ours for our own staff.
         if (($org > 0 || fabo_is_our_staff($viewer)) && fabo_hr_grant($viewer) !== 'none') {
             return true;

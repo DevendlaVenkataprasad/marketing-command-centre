@@ -52,7 +52,7 @@ if (!$plans) {
 }
 echo '</section>';
 if ($admin) {
-    $orgs = array_column(fabo_all('SELECT id, COALESCE(NULLIF(organisation, ""), name) AS n FROM clients WHERE kind = "client" AND parent_id IS NULL AND revoked_at IS NULL ORDER BY n'), 'n', 'id');
+    $orgs = array_column(fabo_all('SELECT id, COALESCE(NULLIF(organisation, ""), name) AS n FROM clients WHERE kind = "client" AND revoked_at IS NULL ORDER BY n'), 'n', 'id');     // a client's own clients run their own events too
     echo '<div class="inc-grid2"><section class="card"><h2>New plan</h2>' . inc_form_open() . '<input type="hidden" name="action" value="plan">' . inc_field('Name', '<input type="text" name="name" maxlength="120" required>', '', true) . inc_field('Description', '<input type="text" name="description" maxlength="255">')
        . '<div class="inc-row">' . inc_field('Price', '<input type="number" step="0.01" name="price" value="0">') . inc_field('Billing', '<select name="billing">' . inc_options(['monthly' => 'Monthly', 'yearly' => 'Yearly', 'custom' => 'Custom'], 'monthly') . '</select>') . '</div>'
        . '<div class="inc-row">' . inc_field('Most attendees per event', '<input type="number" name="max_attendees" min="1">') . '</div>'

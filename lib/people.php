@@ -75,43 +75,61 @@ function fabo_save_child_access(int $childId, array $wanted, array $cap): array
     return $saved;
 }
 
-/** The modules a head may pass on to their team: every module marked 'team' in fabo_modules(). Stored 'edit' reads as Owner. */
-function fabo_child_module_keys(): array
+/**
+ * The modules a client may pass on. To their team ('team'): every module
+ * marked 'team' in fabo_modules(), to run inside the client's own
+ * organisation. To a client of their own ('client'): the same modules plus
+ * the CEO Dashboard -- and there each is the new client's OWN, separate
+ * module with its own data (a client's client is an organisation of its own;
+ * see fabo_module_org()). Stored 'edit' reads as Owner.
+ */
+function fabo_child_module_keys(string $kind = 'team'): array
 {
-    return array_keys(array_filter(fabo_modules(), static fn(array $m) => isset($m['team'])));
+    $keys = array_keys(array_filter(fabo_modules(), static fn(array $m) => isset($m['team'])));
+    if ($kind === 'client' && isset(fabo_modules()['ceo'])) {
+        $keys[] = 'ceo';
+    }
+    return $keys;
 }
 
-/** What My Team calls each of them, and what Owner / View only mean there: key => [name, description]. */
-function fabo_child_module_labels(): array
+/** What the desk calls each of them, and what it means: key => [name, description]. */
+function fabo_child_module_labels(string $kind = 'team'): array
 {
-    return array_map(static fn(array $m) => $m['team'], array_filter(fabo_modules(), static fn(array $m) => isset($m['team'])));
+    $out = [];
+    foreach (fabo_child_module_keys($kind) as $k) {
+        $m = fabo_modules()[$k];
+        $out[$k] = $kind === 'client'
+            ? [preg_replace('/\s+—\s+their own$/u', '', (string) $m['label']), 'Their own, separate from yours: ' . lcfirst((string) ($m['hint'] ?? '')) . ' Owner runs it; View only reads it.']
+            : $m['team'];
+    }
+    return $out;
 }
 
 /**
- * Modules a head may pass on to their own team members: HR and CRM, no more
- * than they hold. A client's own sub-clients are separate organisations and
- * get no HR from here. key => strongest permission.
+ * Modules a client may pass on ($kind 'team' to their own team members,
+ * 'client' to clients of their own), never more than they hold now
+ * themselves -- which is itself capped by every client above them.
+ * key => strongest permission.
  */
-function fabo_delegatable_modules(array $person): array
+function fabo_delegatable_modules(array $person, string $kind = 'team'): array
 {
-    if (($person['kind'] ?? 'client') !== 'client' || (int) ($person['parent_id'] ?? 0) !== 0
-        || !empty($person['is_committee'])) {
+    if (($person['kind'] ?? 'client') !== 'client' || !empty($person['is_committee']) || empty($person['id'])) {
         return [];
     }
-    $mine = fabo_client_access((int) $person['id']);
-    $out  = [];
-    foreach (fabo_child_module_keys() as $k) {
-        if (in_array($mine[$k] ?? 'none', ['view', 'edit'], true)) {
-            $out[$k] = $mine[$k];
+    $out = [];
+    foreach (fabo_child_module_keys($kind) as $k) {
+        $p = fabo_head_module_permission((int) $person['id'], $k);
+        if ($p !== 'none') {
+            $out[$k] = $p;
         }
     }
     return $out;
 }
 
-/** Writes a team member's module grants, capped by $modCap. Returns what was stored. */
-function fabo_save_child_modules(int $childId, array $wanted, array $modCap): array
+/** Writes a team member's or a client's module grants, capped by $modCap. Returns what was stored. */
+function fabo_save_child_modules(int $childId, array $wanted, array $modCap, string $kind = 'team'): array
 {
-    $keys = fabo_child_module_keys();
+    $keys = fabo_child_module_keys($kind);
     fabo_exec('DELETE FROM client_sheet_access WHERE client_id = ? AND sheet_key IN ('
               . implode(',', array_fill(0, count($keys), '?')) . ')',
               'i' . str_repeat('s', count($keys)), array_merge([$childId], $keys));
@@ -164,9 +182,10 @@ function fabo_recap_descendants(int $parentId, int $depth = 0): void
     foreach (fabo_all('SELECT * FROM clients WHERE parent_id = ?', 'i', [$parentId]) as $child) {
         $cid = (int) $child['id'];
         fabo_save_child_access($cid, fabo_client_access($cid), $cap);
-        // HR and CRM, on their own team members, back within what the head holds.
-        if (($child['kind'] ?? '') === 'team') {
-            fabo_save_child_modules($cid, fabo_client_access($cid), fabo_delegatable_modules($parent));
+        // Modules, on their own team members and on clients of their own, back within what the parent holds.
+        if (($parent['kind'] ?? '') === 'client') {
+            $ck = ($child['kind'] ?? '') === 'team' ? 'team' : 'client';
+            fabo_save_child_modules($cid, fabo_client_access($cid), fabo_delegatable_modules($parent, $ck), $ck);
         }
         // Their current rights, re-saved through the parent's cap.
         fabo_save_rights($cid, $child, $parent);

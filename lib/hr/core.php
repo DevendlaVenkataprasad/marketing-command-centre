@@ -110,7 +110,7 @@ function hr_start(array $viewer): array
     if ($isAdmin) {
         $org = hr_admin_org();
     } else {
-        $org = fabo_viewer_org($viewer);
+        $org = fabo_module_org_of($viewer);   // a client's own client is a company of its own
     }
 
     $ctx = [
@@ -175,20 +175,18 @@ function hr_admin_org(): int
     fabo_session();
     if (isset($_GET['org']) && is_numeric($_GET['org'])) {
         $want = (int) $_GET['org'];
-        if ($want === 0 || fabo_one('SELECT id FROM clients WHERE id = ? AND kind = "client"
-                                     AND (parent_id IS NULL OR parent_id = 0)', 'i', [$want])) {
+        if ($want === 0 || fabo_one('SELECT id FROM clients WHERE id = ? AND kind = "client"', 'i', [$want])) {
             $_SESSION['hr_org'] = $want;
         }
     }
     return (int) ($_SESSION['hr_org'] ?? 0);
 }
 
-/** Organisations the administrator can switch between: ours plus every top-level client. */
+/** Organisations the administrator can switch between: ours plus every client, a client's own clients too. */
 function hr_org_choices(): array
 {
     $out = [0 => fabo_app_name() . ' (our company)'];
-    foreach (fabo_all('SELECT id, name, organisation FROM clients WHERE kind = "client"
-                       AND (parent_id IS NULL OR parent_id = 0) ORDER BY organisation, name') as $c) {
+    foreach (fabo_all('SELECT id, name, organisation FROM clients WHERE kind = "client" ORDER BY organisation, name') as $c) {
         $out[(int) $c['id']] = ($c['organisation'] ?: $c['name']);
     }
     return $out;

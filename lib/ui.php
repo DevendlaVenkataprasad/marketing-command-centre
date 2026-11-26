@@ -536,7 +536,16 @@ function fabo_head(array $viewer, string $title, string $current = ''): void
             echo cw_nav_html($current);                 // Co-working Space
             require_once __DIR__ . '/ds/nav.php';
             echo ds_nav_html($viewer, $current);       // Digital Signatures
+            require_once __DIR__ . '/edu/nav.php';
+            echo edu_nav_html($current);              // Academic
+            require_once __DIR__ . '/iv/nav.php';
+            echo iv_nav_html($current);               // Startup Discovery
+            require_once __DIR__ . '/wm/nav.php';
+            echo wm_nav_html($viewer, $current);      // Work Management
         } elseif (fabo_signed_in()) {
+            // Work Management: only for team members and clients the administrator has given access.
+            require_once __DIR__ . '/wm/nav.php';
+            echo wm_nav_html($viewer, $current);
             // HR appears only for someone the administrator has given an HR role.
             echo hr_nav_html($viewer, $current);
             // Incubation: ours for our staff granted it, a client's own for them and their team.
@@ -562,6 +571,16 @@ function fabo_head(array $viewer, string $title, string $current = ''): void
             // Digital Signatures: everyone in an organisation that holds it signs what is sent to them.
             require_once __DIR__ . '/ds/nav.php';
             echo ds_nav_html($viewer, $current);
+            // Academic: a client's own institutions and people, as granted on Clients (or passed on by the head).
+            if (fabo_module_permission($viewer, 'academic') !== 'none') {
+                require_once __DIR__ . '/edu/nav.php';
+                echo edu_nav_html($current);
+            }
+            // Startup Discovery: a client's own HoD dashboards and pipeline, as granted on Clients (or passed on by the head).
+            if (fabo_module_permission($viewer, 'ideaval') !== 'none') {
+                require_once __DIR__ . '/iv/nav.php';
+                echo iv_nav_html($current);
+            }
             $incGrant = inc_grant($viewer);
             if ($incGrant !== 'none') {
                 echo inc_nav_html($current, $incGrant === 'edit', false, $viewer);
@@ -710,6 +729,8 @@ function fabo_nav_icons(): array
         'doc'      => '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
         'pulse'    => '<path d="M3 12h4l2.5-7 4 14 2.5-7h5"/>',
         'sign'     => '<path d="M3 17c3-1 4-6 6-6s1 5 3 5 3-4 5-4 2 3 4 3"/><path d="M3 21h18"/>',
+        'campus'   => '<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/><path d="M22 9v6"/>',
+        'bulb'     => '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.2h5c0-.9.4-1.7 1.1-2.2A6 6 0 0 0 12 3z"/>',
         'cowork'   => '<circle cx="8" cy="6" r="2.2"/><circle cx="16" cy="6" r="2.2"/><path d="M4.5 13a3.5 3.5 0 0 1 7 0M12.5 13a3.5 3.5 0 0 1 7 0"/><rect x="2.5" y="13" width="19" height="2.6" rx="1"/><path d="M5 15.6V21M19 15.6V21"/>',
     ];
 }

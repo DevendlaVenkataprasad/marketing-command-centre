@@ -16,6 +16,7 @@ require_once __DIR__ . '/../lib/notify.php';
 require_once __DIR__ . '/../lib/uploads.php';
 require_once __DIR__ . '/../lib/people.php';
 require_once __DIR__ . '/../lib/teamdash.php';
+require_once __DIR__ . '/../lib/wm/access.php';
 fabo_boot();
 fabo_require_admin();
 
@@ -39,6 +40,8 @@ $teamModules = [
     'incubation' => ['Incubation Management', 'Owner: everything the administrator can do — applications, stages, assignment, evaluation, review, forms and settings. View only: reads applications, workspaces and reports, and exports them.'],
     'organizers' => ['Event Organizers', 'Owner: runs our approved events as the administrator does — forms, applications, public pages, tickets, check-in and settings. View only: reads and exports them.'],
     'esign'      => ['Digital Signatures', 'Owner: runs our Digital Signatures as the administrator does — every document, workflow, signatory, provider and setting. View only: reads every document and report. Without it they still sign what is sent to them.'],
+    'academic'   => ['Academic', 'Owner: runs our Academic as the administrator does — institutions, departments, students, faculty, mentors, courses, imports and the Campus portal settings. View only: reads it.'],
+    'ideaval'    => ['Startup Discovery', 'Owner: runs our Startup Discovery as the administrator does — HoD dashboards, students, rounds and timing, the pipeline and teams. View only: reads it.'],
     'finance'    => ['Finance Portal', 'Owner: runs our Finance Portal as the administrator does — ledger, bills, invoices, payments, budgets, settings and finance roles. View only: reads every desk and report. Without it they still claim expenses and raise requests; finer roles are given in Finance → Settings.'],
 ];
 /* All three are granted the same way, under "Modules they can run". The
@@ -132,6 +135,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $after  = fabo_client_access($id);
                 $imgFlash = fabo_save_person_image($id, $_FILES['image'] ?? null, !empty($_POST['remove_image']));
+                /* Work Management keeps its own membership (wm_members), not a
+                   client_sheet_access row. It is set here as well as on
+                   Work Management -> Access; both edit the same row. */
+                $wmNote = '';
+                if (!empty($_POST['wm_present'])) {
+                    try {
+                        $wmNote = wm_team_member_set(wm_ctx($viewer), $id, ($_POST['wm_access'] ?? '') === 'team',
+                                                     (array) ($_POST['wm_depts'] ?? []));
+                    } catch (WmError $e) {
+                        $wmNote = ' Work Management not changed: ' . $e->getMessage();
+                    }
+                }
 
                 $note = '';
                 if ($before !== $after) {
@@ -186,7 +201,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                           . 'now: user ID ' . $person['login_id'] . ', password '
                           . $plain . '.';
                 }
-                $flash = ($imgFlash && $imgFlash[0] === 'err') ? $imgFlash : ['ok', 'Saved.' . $note];
+                $flash = ($imgFlash && $imgFlash[0] === 'err') ? $imgFlash : ['ok', 'Saved.' . $note . $wmNote];
                 break;
 
             case 'mail_send':
@@ -470,6 +485,36 @@ fabo_head($viewer, 'Team Management', 'team');
           </tbody>
         </table>
         <div class="hint">They open these from their own dashboard menu after signing in.</div>
+      </div>
+      <?php
+        $wmCtx  = wm_ctx($viewer);
+        $wmRow  = wm_member_row((int) $editing['id']);
+        $wmOn   = $wmRow && $wmRow['role'] === 'team' && (int) $wmRow['is_active'] === 1;
+        $wmHave = $wmRow ? array_map(static fn($r) => (int) $r['department_id'],
+            fabo_all('SELECT department_id FROM wm_user_department_access WHERE user_id = ?', 'i', [(int) $editing['id']])) : [];
+        $wmDepts = wm_departments($wmCtx);
+      ?>
+      <div class="field">
+        <label>Work Management</label>
+        <input type="hidden" name="wm_present" value="1">
+        <table class="data accesstable">
+          <thead><tr><th>Module</th><th>No access</th><th>Team member</th></tr></thead>
+          <tbody><tr>
+            <td>Work Management<div class="hint">Team member: sees, creates and updates tasks in the departments ticked below, comments and logs time. Users, departments and access stay with the administrator.</div></td>
+            <td><input type="radio" name="wm_access" value="none" <?= $wmOn ? '' : 'checked' ?>></td>
+            <td><input type="radio" name="wm_access" value="team" <?= $wmOn ? 'checked' : '' ?>></td>
+          </tr></tbody>
+        </table>
+        <?php if ($wmDepts): ?>
+          <div style="display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:8px">
+            <?php foreach ($wmDepts as $d): ?>
+              <label style="font-weight:normal"><input type="checkbox" name="wm_depts[]" value="<?= (int) $d['id'] ?>" <?= in_array((int) $d['id'], $wmHave, true) ? 'checked' : '' ?>> <?= e($d['name']) ?><?= (int) ($d['is_active'] ?? 1) === 1 ? '' : ' (inactive)' ?></label>
+            <?php endforeach; ?>
+          </div>
+          <div class="hint">Departments whose tasks they work on. With none ticked they can open Work Management but see no tasks.</div>
+        <?php else: ?>
+          <div class="hint">No departments yet. Add them in <a href="work.php?p=departments">Work Management → Departments</a>, then tick them here.</div>
+        <?php endif; ?>
       </div>
       <div class="formsec">
         <h3>Sending work out for approval</h3>

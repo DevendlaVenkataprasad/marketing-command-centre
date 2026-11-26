@@ -907,6 +907,28 @@ function fabo_modules(): array
             'page'  => 'ceo.php',
             'hint'  => 'Live executive overview across their modules, hub and spokes, targets and reports. Only the head has it until they grant it to named people.',
         ],
+        /* Their organisation's own Academic (lib/edu, rows by org_id): institutions,
+           departments, students, faculty, mentors and institution admins, and the
+           Campus portal (campus.php) those people sign in to with their own
+           accounts -- never staff logins. Can edit runs it; View only reads it. */
+        'academic' => [
+            'label' => 'Academic — their own',
+            'page'  => 'academic.php',
+            'hint'  => 'Run their institutions, departments, students, faculty, mentors and institution admins, and the Campus portal they sign in to.',
+            'team'  => ['Academic',
+                        'Owner: runs Academic as you do — institutions, departments, people, imports, sign-in links and the Campus portal settings. View only: reads it.'],
+        ],
+        /* Their organisation's own Startup Discovery (lib/iv, rows by org_id): one
+           dashboard per department for its Head of Department (who signs in to
+           hod.php with their own account, never a staff login), students, idea
+           rounds validated with a Gem, and one pipeline of the top ideas with teams. */
+        'ideaval' => [
+            'label' => 'Startup Discovery — their own',
+            'page'  => 'idea-validation.php',
+            'hint'  => 'HoD dashboards per department, students, idea rounds checked with a Gem, and one pipeline of each department\'s top ideas with teams.',
+            'team'  => ['Startup Discovery',
+                        'Owner: runs Startup Discovery as you do — HoD dashboards, students, rounds and timing, the pipeline and teams. View only: reads it.'],
+        ],
         'facilities' => [
             'label' => 'Admin & Facilities — their own',
             'page'  => 'facilities.php',
@@ -945,7 +967,18 @@ function fabo_module_permission(array $viewer, string $key): string
      * page enforces it.
      */
     $p = $viewer['access'][$key] ?? 'none';
-    return in_array($p, ['view', 'edit'], true) ? $p : 'none';
+    $p = in_array($p, ['view', 'edit'], true) ? $p : 'none';
+    /* Never more than the client above holds now: a team member's head, or the
+       client who made this client (a client's client is its own organisation,
+       but what it runs was handed down and goes when the hand-down does). */
+    $parent = (int) ($viewer['client']['parent_id'] ?? 0);
+    if ($p !== 'none' && $parent > 0) {
+        $up = fabo_one('SELECT kind FROM clients WHERE id = ?', 'i', [$parent]);
+        if ($up && $up['kind'] === 'client') {
+            $p = fabo_cap_hr($p, fabo_head_module_permission($parent, $key));
+        }
+    }
+    return $p;
 }
 
 /**
@@ -1095,6 +1128,91 @@ function fabo_is_our_staff(?array $viewer): bool
         return false;
     }
     return ($c['kind'] ?? 'client') === 'team' && (int) ($c['parent_id'] ?? 0) === 0;
+}
+
+/*
+ * MODULES BELONG TO ORGANISATIONS. Every client is the head of an
+ * organisation of its own -- one we made, and equally one a client made on My
+ * Clients (a client's client: a separate organisation with its own data in
+ * every module). A team member belongs to the client who made them. What a
+ * head holds of a module is never more than every client above it holds NOW.
+ * Sheets keep their own rules (fabo_viewer_org(), fabo_row_owner()).
+ */
+
+/**
+ * The organisation whose module data a viewer works in: 0 for ours
+ * (administrator, our own staff), a client's own id, a team member's head's
+ * id; -1 for none.
+ */
+function fabo_module_org(?array $viewer): int
+{
+    if (!empty($viewer['is_admin'])) {
+        return 0;
+    }
+    $c = $viewer['client'] ?? null;
+    if (!$c || empty($c['id'])) {
+        return -1;
+    }
+    if (fabo_is_our_staff($viewer)) {
+        return 0;
+    }
+    if (($c['kind'] ?? '') === 'client') {
+        return (int) $c['id'];
+    }
+    $parent = (int) ($c['parent_id'] ?? 0);
+    if (($c['kind'] ?? '') !== 'team' || $parent <= 0) {
+        return -1;
+    }
+    $head = fabo_one('SELECT id, kind FROM clients WHERE id = ?', 'i', [$parent]);
+    return $head && $head['kind'] === 'client' ? (int) $head['id'] : -1;
+}
+
+/**
+ * What an organisation's head holds of a module now: their own grant, capped
+ * by every client above them (a client's client never holds more than the
+ * client who made it). 'none' | 'view' | 'edit'.
+ */
+function fabo_head_module_permission(int $headId, string $key, int $depth = 0): string
+{
+    if ($headId <= 0 || $depth > 8) {
+        return 'none';
+    }
+    $h = fabo_one('SELECT id, kind, parent_id, revoked_at, is_committee FROM clients WHERE id = ?', 'i', [$headId]);
+    if (!$h || ($h['kind'] ?? '') !== 'client' || !empty($h['revoked_at']) || !empty($h['is_committee'])) {
+        return 'none';
+    }
+    $p = fabo_client_access($headId)[$key] ?? 'none';
+    $p = in_array($p, ['view', 'edit'], true) ? $p : 'none';
+    $parent = (int) ($h['parent_id'] ?? 0);
+    if ($p !== 'none' && $parent > 0) {
+        $up = fabo_one('SELECT kind FROM clients WHERE id = ?', 'i', [$parent]);
+        if ($up && $up['kind'] === 'client') {
+            $p = fabo_cap_hr($p, fabo_head_module_permission($parent, $key, $depth + 1));
+        }
+    }
+    return $p;
+}
+
+/** fabo_module_org(), but never -1: an account with no organisation of its own keeps the old answer (fabo_viewer_org()), never ours by accident. */
+function fabo_module_org_of(?array $viewer): int
+{
+    $o = fabo_module_org($viewer);
+    return $o >= 0 ? $o : fabo_viewer_org($viewer);
+}
+
+/** Organisations holding a module, for an administrator's switcher: id => name. Clients at any level. */
+function fabo_module_orgs(string $key): array
+{
+    $out = [];
+    foreach (fabo_all("SELECT c.id, COALESCE(NULLIF(c.organisation, ''), c.name) AS n FROM client_sheet_access a
+                         JOIN clients c ON c.id = a.client_id
+                        WHERE a.sheet_key = ? AND a.permission IN ('view','edit') AND c.kind = 'client' AND c.revoked_at IS NULL
+                        ORDER BY n", 's', [$key]) as $r) {
+        if (fabo_head_module_permission((int) $r['id'], $key) !== 'none') {
+            $out[(int) $r['id']] = (string) $r['n'];
+        }
+    }
+    return $out;
 }
 
 /** The organisation a person belongs to: their client, or themselves. */

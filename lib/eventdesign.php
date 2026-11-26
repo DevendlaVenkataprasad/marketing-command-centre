@@ -210,7 +210,7 @@ function fabo_evdesign_tell_owner(array $e, string $reqId, array $req): void
     foreach (fabo_all('SELECT * FROM clients WHERE owner_name = ? AND revoked_at IS NULL AND ' . $mine, 's', [$owner]) as $p) {
         try {
             fabo_notify((int) $p['id'], $head, $body, fabo_row_link((int) $p['id'], 'events', (int) $e['id']));
-            $to = trim((string) ($p['email'] ?? ''));
+            $to = fabo_event_mail_off('event-design') ? '' : trim((string) ($p['email'] ?? ''));   // the notice above still goes
             if ($to !== '' && filter_var($to, FILTER_VALIDATE_EMAIL)
                 && strcasecmp($to, trim((string) ($e['spoc_email'] ?? ''))) !== 0) {
                 fabo_req_post($to, $head, 'The design team has your event',

@@ -285,9 +285,9 @@ function fabo_crm_me(array $viewer): int
 /** Is this the head of a client organisation, rather than someone inside one? */
 function fabo_crm_is_head(array $viewer): bool
 {
+    // Any client heads an organisation of its own, a client's own client too (lib/auth.php).
     $c = $viewer['client'] ?? [];
-    return empty($viewer['is_admin']) && ($c['kind'] ?? 'client') === 'client'
-        && (int) ($c['parent_id'] ?? 0) === 0;
+    return empty($viewer['is_admin']) && ($c['kind'] ?? 'client') === 'client' && !empty($c['id']);
 }
 
 /** A client's own team member (not one of ours, not a head): their head's id, else 0. */
@@ -421,7 +421,7 @@ function fabo_crm_person_org(array $person): int
     if ($kind === 'team') {
         return $parent;                      // ours: 0; a client's team: that client
     }
-    return $parent === 0 ? $id : -1;
+    return $id;                              // any client, a client's own client too, is its own organisation
 }
 
 /** May somebody hold a grant on this board at all? Ours: anyone. A client's: their own people. */

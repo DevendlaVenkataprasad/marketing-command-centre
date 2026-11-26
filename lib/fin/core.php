@@ -119,10 +119,8 @@ function fp_org_grant(int $org): string
     if ($org < 0) {
         return 'none';
     }
-    $r = fabo_one('SELECT a.permission FROM clients c JOIN client_sheet_access a ON a.client_id = c.id AND a.sheet_key = "finance"
-                   WHERE c.id = ? AND c.kind = "client" AND c.parent_id IS NULL AND c.revoked_at IS NULL', 'i', [$org]);
-    $p = (string) ($r['permission'] ?? 'none');
-    return in_array($p, ['view', 'edit'], true) ? $p : 'none';
+    // Any client, a client's own client too, capped by every client above it.
+    return fabo_head_module_permission($org, 'finance');
 }
 
 /** Client organisations that have opened the portal (their tables exist). */

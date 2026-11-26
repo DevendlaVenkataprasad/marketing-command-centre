@@ -16,6 +16,7 @@
 
 require_once __DIR__ . '/../lib/endpoint.php';
 require_once __DIR__ . '/../lib/committees.php';
+require_once __DIR__ . '/../lib/mailer.php';     // fabo_event_mail_off()
 
 fabo_csrf_check();
 [$viewer, $key, $sheet, $perm] = fabo_endpoint('edit');
@@ -88,7 +89,8 @@ if ($cm && $assigned) {
 $msg = $done
     ? $done . ' programme' . ($done === 1 ? '' : 's') . ' sent to ' . ($title ?? fabo_cm_title($name))
       . ' with ' . ($done === 1 ? 'its' : 'their') . ' budget' . ($done === 1 ? '' : 's') . '; '
-      . $mailed . ' member' . ($mailed === 1 ? '' : 's') . ' emailed once with the full list.'
+      . (fabo_event_mail_off('committee') ? 'members see them on their Committee Dashboard (Event Management emails are off).'
+         : $mailed . ' member' . ($mailed === 1 ? '' : 's') . ' emailed once with the full list.')
     : 'No programme was newly assigned.';
 if ($same) {
     $msg .= ' ' . $same . ' already had this committee and ' . ($same === 1 ? 'was' : 'were') . ' left as ' . ($same === 1 ? 'it was' : 'they were') . '.';

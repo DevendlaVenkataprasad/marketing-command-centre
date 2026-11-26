@@ -88,6 +88,11 @@ function fabo_post_or_queue(string $to, string $subject, string $text, string $h
 {
     require_once __DIR__ . '/notify.php';
 
+    // Event Management mail is off for everyone: not sent, not queued.
+    if (fabo_event_mail_off($kind)) {
+        return [false, FABO_EVENT_MAIL_OFF_WHY, 0];
+    }
+
     /* Too soon after the last attempt: queue it rather than make a second
        request the server is only going to refuse. It goes out on the next
        attempt, which the portal makes by itself. */
@@ -314,6 +319,11 @@ function fabo_outbox_send(int $id, ?array $actor = null): array
     }
     if ((string) $m['state'] === 'sent') {
         return [true, 'it had already gone'];
+    }
+    // An Event Management message queued before its mail was switched off never goes.
+    if (fabo_event_mail_off((string) $m['kind'])) {
+        fabo_outbox_drop($id);
+        return [true, FABO_EVENT_MAIL_OFF_WHY . ', so it was removed from the outbox'];
     }
     fabo_outbox_touch();
     $actor = $actor ?? fabo_outbox_sent_as($m);

@@ -176,18 +176,8 @@ function it_grant(array $viewer, string $desk): string
     if ($org <= 0) {
         return 'none';
     }
-    $key = it_module_key($desk);
-    $rank = ['none' => 0, 'view' => 1, 'edit' => 2];
-    $p = $viewer['access'][$key] ?? 'none';
-    $p = isset($rank[$p]) ? $p : 'none';
-    if ((int) $c['id'] !== $org) {
-        $cap = fabo_client_access($org)[$key] ?? 'none';
-        $cap = isset($rank[$cap]) ? $cap : 'none';
-        if ($rank[$cap] < $rank[$p]) {
-            $p = $cap;
-        }
-    }
-    return $p;
+    // Capped by what the client above holds now: a team member's head, or the client who made a client.
+    return fabo_module_permission($viewer, it_module_key($desk));
 }
 
 /** May this organisation run the desk at all? Ours always; a client only while its head holds it. */
@@ -199,9 +189,7 @@ function it_org_enabled(string $desk, int $org): bool
     if ($org < 0) {
         return false;
     }
-    return (bool) fabo_one('SELECT c.id FROM clients c JOIN client_sheet_access a ON a.client_id = c.id AND a.sheet_key = ?
-                            WHERE c.id = ? AND c.kind = "client" AND c.parent_id IS NULL AND c.revoked_at IS NULL AND a.permission IN ("view","edit")',
-                           'si', [it_module_key($desk), $org]);
+    return fabo_head_module_permission($org, it_module_key($desk)) !== 'none';
 }
 
 /** Client organisations that have opened a desk (their tables exist). */

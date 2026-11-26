@@ -145,12 +145,7 @@ function cw_orgs(): array
 {
     $out = [0 => 'Our own'];
     try {
-        foreach (fabo_all("SELECT c.id, COALESCE(NULLIF(c.organisation, ''), c.name) AS n FROM client_sheet_access a
-                             JOIN clients c ON c.id = a.client_id
-                            WHERE a.sheet_key = 'coworking' AND a.permission IN ('view','edit') AND c.parent_id IS NULL
-                            ORDER BY n") as $r) {
-            $out[(int) $r['id']] = (string) $r['n'];
-        }
+        $out += fabo_module_orgs('coworking');      // clients at any level, a client's own clients too
     } catch (Throwable $e) {
         // client_sheet_access not there yet: ours only
     }
@@ -161,7 +156,7 @@ function cw_orgs(): array
 function cw_org(array $viewer): int
 {
     if (empty($viewer['is_admin'])) {
-        return fabo_viewer_org($viewer);
+        return fabo_module_org_of($viewer);
     }
     $orgs = cw_orgs();
     $want = isset($_REQUEST['org']) ? (int) $_REQUEST['org'] : null;

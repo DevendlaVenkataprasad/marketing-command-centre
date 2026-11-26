@@ -119,18 +119,8 @@ function inc_grant(array $viewer, string $key = 'incubation'): string
     if ($org < 0) {
         return 'none';
     }
-    $rank = ['none' => 0, 'view' => 1, 'edit' => 2];
-    $p = $viewer['access'][$key] ?? 'none';
-    $p = isset($rank[$p]) ? $p : 'none';
-    // A client's team member: capped by what their head holds now.
-    if ($org > 0 && (int) $c['id'] !== $org) {
-        $cap = fabo_client_access($org)[$key] ?? 'none';
-        $cap = isset($rank[$cap]) ? $cap : 'none';
-        if ($rank[$cap] < $rank[$p]) {
-            $p = $cap;
-        }
-    }
-    return $p;
+    // Capped by what the client above holds now: a team member's head, or the client who made a client.
+    return fabo_module_permission($viewer, $key);
 }
 
 /** The desks listed under "Incubation Management" while the module is open. */

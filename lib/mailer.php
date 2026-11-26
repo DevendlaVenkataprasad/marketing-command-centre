@@ -325,6 +325,31 @@ class FaboSmtp
     }
 }
 
+/**
+ * Event Management sends no email, for any client.
+ *
+ * Switched off on 2026-11-24: the module is no longer used. Committee
+ * assignment and reminder mail, the decision mail to the SPOC, results-link
+ * reminders, the "design team has your event" mail, and approval/deletion mail
+ * about Events rows all stop here. The dashboard notices that go with them
+ * still appear, and the pages and data are untouched.
+ *
+ * To turn the mail back on, make this return false.
+ *
+ * $kind: the outbox kind of a message (committee…, cmdecision…, event-results…).
+ * $sheetKey: the sheet a general approval or deletion message is about.
+ */
+function fabo_event_mail_off(string $kind = '', string $sheetKey = ''): bool
+{
+    if ($sheetKey === 'events') {
+        return true;
+    }
+    return $kind !== '' && (bool) preg_match('/^(committee|cmdecision|event-results|event-design)/', $kind);
+}
+
+/** What a caller reports when fabo_event_mail_off() kept a message back. */
+const FABO_EVENT_MAIL_OFF_WHY = 'emails from Event Management are switched off';
+
 /** Is outgoing mail configured at all? */
 function fabo_mail_configured(): bool
 {

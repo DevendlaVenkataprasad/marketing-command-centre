@@ -24,6 +24,7 @@ require_once __DIR__ . '/../lib/budget.php';
 require_once __DIR__ . '/../lib/manage.php';
 require_once __DIR__ . '/../lib/dashwidgets.php';
 require_once __DIR__ . '/../lib/committees.php';
+require_once __DIR__ . '/../lib/mailer.php';     // fabo_event_mail_off()
 fabo_boot();
 
 /* Ours at scope 0, a client's at the id of their organisation. Everything
@@ -392,7 +393,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'hour'  => (int) ($_POST['hour'] ?? 10),
                 ]);
                 $flash = ['ok', $rc['on']
-                    ? 'Reminders saved. Members who have not voted get one email a day at most, from '
+                    ? 'Reminders saved. Members who have not voted are reminded once a day at most' . (fabo_event_mail_off('committee reminder') ? ' (dashboard notice only; Event Management emails are off)' : '') . ', from '
                       . sprintf('%02d:00', $rc['hour']) . ', every ' . $rc['every'] . ' day' . ($rc['every'] === 1 ? '' : 's') . '.'
                     : 'Automatic reminders are off. You can still remind from the Events sheet.'];
                 break;
@@ -400,7 +401,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             case 'cm_auto':
                 $ac = fabo_cm_auto_save($scope, (int) ($_POST['committee_id'] ?? 0));
                 $flash = ['ok', $ac
-                    ? 'Upcoming events now go to ' . fabo_cm_title((string) $ac['name']) . ' on their own. Those waiting are sent within a few minutes; each member gets one email listing them all.'
+                    ? 'Upcoming events now go to ' . fabo_cm_title((string) $ac['name']) . ' on their own. Those waiting are sent within a few minutes; ' . (fabo_event_mail_off('committee') ? 'members see them on their Committee Dashboard (Event Management emails are off).' : 'each member gets one email listing them all.')
                     : 'Automatic assignment is off. Choose a committee in an event\'s Committee column to send it.'];
                 break;
 
@@ -2094,8 +2095,8 @@ fabo_head($viewer, $chartsOnly ? 'Dashboard Charts' : 'Sheet Management', $chart
         (as Event Management's Upcoming Events counts them) that has <strong>both a Start Date and
         an End Date</strong> is sent to it with its budget, and shows on each member's
         <strong>Committee Dashboard</strong> with a notification, to approve or reject. An event
-        without both dates waits until they are filled in. Members get <strong>one email</strong>
-        listing every event sent at once, never one per event. An event already approved or
+        without both dates waits until they are filled in. <?= fabo_event_mail_off('committee') ? 'Members are told by a notification only: emails from Event Management are switched off.' : 'Members get <strong>one email</strong>
+        listing every event sent at once, never one per event.' ?> An event already approved or
         rejected keeps that decision. Choosing another committee in an event's Committee column
         still overrides it.</p>
     </div>
@@ -2143,8 +2144,8 @@ fabo_head($viewer, $chartsOnly ? 'Dashboard Charts' : 'Sheet Management', $chart
         <h2>Reminders</h2>
       </div>
       <p class="sb-lead">Committee members who have not voted are reminded automatically.
-        Each gets <strong>one email</strong> listing every event still waiting on them,
-        never one per event. Reminders stop as soon as they vote or the committee decides.
+        <?= fabo_event_mail_off('committee reminder') ? 'Each gets a notification on their dashboard (emails from Event Management are switched off).' : 'Each gets <strong>one email</strong> listing every event still waiting on them,
+        never one per event.' ?> Reminders stop as soon as they vote or the committee decides.
         To remind about particular events now, tick them on the Events sheet and press
         <em>Remind committee</em>.</p>
     </div>

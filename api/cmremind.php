@@ -12,6 +12,7 @@
 
 require_once __DIR__ . '/../lib/endpoint.php';
 require_once __DIR__ . '/../lib/committees.php';
+require_once __DIR__ . '/../lib/mailer.php';     // fabo_event_mail_off()
 
 fabo_csrf_check();
 [$viewer, $key, $sheet, $perm] = fabo_endpoint('edit');
@@ -47,6 +48,10 @@ if (!$r['events']) {
     $msg = 'None of the selected programmes is waiting on a committee, so no reminder was sent.';
 } elseif (!$r['members']) {
     $msg = 'Every member has already voted on the selected programmes — nobody to remind.';
+} elseif (fabo_event_mail_off('committee reminder')) {
+    $msg = $r['members'] . ' committee member' . ($r['members'] === 1 ? '' : 's') . ' reminded about '
+         . $r['events'] . ' pending programme' . ($r['events'] === 1 ? '' : 's') . ' with a notice on their dashboard. '
+         . 'No email was sent: ' . FABO_EVENT_MAIL_OFF_WHY . '.';
 } else {
     $msg = $r['members'] . ' committee member' . ($r['members'] === 1 ? '' : 's') . ' reminded about '
          . $r['events'] . ' pending programme' . ($r['events'] === 1 ? '' : 's') . ' — one email each ('

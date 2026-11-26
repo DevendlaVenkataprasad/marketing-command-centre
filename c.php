@@ -154,7 +154,22 @@ if (!$sheets) {
             exit;
         }
     }
-    fabo_deny('No sheets have been shared with you yet.', 403);
+    /* Nor anyone given other modules and no sheets (a client's own client
+       handed Startup Discovery, Finance, the CEO Dashboard...): the first of
+       their modules, whose page carries the menu to the rest. The CEO
+       Dashboard first, as it gathers the others. */
+    $mods = fabo_modules();
+    if (isset($mods['ceo'])) {
+        $mods = ['ceo' => $mods['ceo']] + $mods;
+    }
+    foreach ($mods as $mk => $m) {
+        $page = (string) ($m['page'] ?? '');
+        if ($page !== '' && is_file(__DIR__ . '/' . $page) && fabo_module_permission($viewer, $mk) !== 'none') {
+            header('Location: ' . $page);
+            exit;
+        }
+    }
+    fabo_deny('No sheets or modules have been shared with you yet. Ask the person who invited you to give you access.', 403);
 }
 
 $key = (string) ($_GET['sheet'] ?? array_key_first($sheets));

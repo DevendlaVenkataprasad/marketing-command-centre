@@ -57,12 +57,12 @@ Options -Indexes
 # the first one's sheet and saved their work there.
 <IfModule LiteSpeed>
     RewriteEngine On
-    RewriteRule ^(d\.php|c\.php|form\.php|download\.php|rsvp\.php|hr\.php|admin/hr\.php|incubation\.php|incubation-apply\.php|coworking-apply\.php|interview-panel\.php|ceo-approval\.php|offer-letter\.php|certificate\.php|admin/incubation\.php|organizers\.php|admin/organizers\.php|event\.php|event-apply\.php|event-ticket\.php|event-pay\.php|event-account\.php|event-live\.php|event-staff\.php|event-api\.php|event-chat\.php|event-hook\.php|ceo\.php|admin/ceo\.php|sign\.php|admin/sign\.php|sign-callback\.php|sign-verify\.php|guest-sign\.php|api/.*)$ - [E=Cache-Control:no-cache]
+    RewriteRule ^(d\.php|c\.php|form\.php|download\.php|rsvp\.php|hr\.php|admin/hr\.php|incubation\.php|incubation-apply\.php|coworking-apply\.php|interview-panel\.php|ceo-approval\.php|offer-letter\.php|certificate\.php|admin/incubation\.php|organizers\.php|admin/organizers\.php|event\.php|event-apply\.php|event-ticket\.php|event-pay\.php|event-account\.php|event-live\.php|event-staff\.php|event-api\.php|event-chat\.php|event-hook\.php|ceo\.php|admin/ceo\.php|sign\.php|admin/sign\.php|sign-callback\.php|sign-verify\.php|guest-sign\.php|academic\.php|admin/academic\.php|campus\.php|idea-validation\.php|admin/idea-validation\.php|hod\.php|idea-form\.php|api/.*)$ - [E=Cache-Control:no-cache]
 </IfModule>
 <IfModule mod_headers.c>
     # Not download.php: it says itself what may be kept (a picture, by this
     # browser only), and a header set here would overrule it.
-    <FilesMatch "^(d|c|form|rsvp|hr|incubation|incubation-apply|organizers|event|event-apply|event-ticket|event-pay|event-account|event-live|event-staff|event-api|event-chat|event-hook|coworking-apply|interview-panel|ceo-approval|offer-letter|certificate)\.php$">
+    <FilesMatch "^(d|c|form|rsvp|hr|incubation|incubation-apply|organizers|event|event-apply|event-ticket|event-pay|event-account|event-live|event-staff|event-api|event-chat|event-hook|coworking-apply|interview-panel|ceo-approval|offer-letter|certificate|academic|campus|idea-validation|hod|idea-form)\.php$">
         Header always set Cache-Control "no-store, no-cache, must-revalidate, max-age=0, private"
     </FilesMatch>
 </IfModule>

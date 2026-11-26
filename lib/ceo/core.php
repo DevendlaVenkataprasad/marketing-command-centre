@@ -106,22 +106,15 @@ function ceo_org_enabled(int $org): bool
     if ($org < 0) {
         return false;
     }
-    $r = fabo_one('SELECT a.permission FROM clients c JOIN client_sheet_access a ON a.client_id = c.id AND a.sheet_key = "ceo"
-                   WHERE c.id = ? AND c.kind = "client" AND c.parent_id IS NULL AND c.revoked_at IS NULL', 'i', [$org]);
-    return in_array((string) ($r['permission'] ?? ''), ['view', 'edit'], true);
+    // Any client, a client's own client too, while every client above it holds it as well.
+    return fabo_head_module_permission($org, 'ceo') !== 'none';
 }
 
 /** Organisations for the administrator's switcher: id => name. Ours first. */
 function ceo_orgs(): array
 {
     $out = [0 => defined('APP_NAME') ? APP_NAME : 'Our organisation'];
-    foreach (fabo_all("SELECT c.id, COALESCE(NULLIF(c.organisation, ''), c.name) AS n FROM client_sheet_access a
-                         JOIN clients c ON c.id = a.client_id
-                        WHERE a.sheet_key = 'ceo' AND a.permission IN ('view','edit') AND c.parent_id IS NULL AND c.revoked_at IS NULL
-                        ORDER BY n") as $r) {
-        $out[(int) $r['id']] = (string) $r['n'];
-    }
-    return $out;
+    return $out + fabo_module_orgs('ceo');
 }
 
 /** The organisation this request is about. Only the administrator chooses; everyone else has their own. */
@@ -367,7 +360,7 @@ function ceo_is_owner(array $viewer, int $org): bool
         return true;
     }
     $c = $viewer['client'] ?? null;
-    return $c && $org > 0 && (int) $c['id'] === $org && ($c['kind'] ?? '') === 'client' && empty($c['parent_id']);
+    return $c && $org > 0 && (int) $c['id'] === $org && ($c['kind'] ?? '') === 'client';     // a client's own client heads its own
 }
 
 /** The person id access rows are kept under. The administrator's is 0. */

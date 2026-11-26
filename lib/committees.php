@@ -32,6 +32,7 @@
 
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/lists.php';
+require_once __DIR__ . '/mailer.php';      // fabo_event_mail_off()
 
 /** The rules a committee can decide by, with how each reads on the page. */
 function fabo_cm_rules(): array
@@ -521,6 +522,7 @@ function fabo_cm_signoff(int $eventId, string $state, string $note): void
         return;
     }
     require_once __DIR__ . '/lists.php';
+require_once __DIR__ . '/mailer.php';      // fabo_event_mail_off()
     $opts = fabo_list_values('Sign-off');
     if ($opts && !in_array($word, $opts, true)) {
         $word = null;                       // this organisation does not use that word: leave it
@@ -1189,7 +1191,7 @@ function fabo_cm_autoassign_scope(int $scope): int
     }
     fabo_setting_put('cm_autoassign_log_' . $scope, date('d M Y, H:i') . ' — ' . $n . ' upcoming event'
                      . ($n === 1 ? '' : 's') . ' sent to ' . $title . '; ' . $mailed . ' member'
-                     . ($mailed === 1 ? '' : 's') . ' emailed once.');
+                     . ($mailed === 1 ? '' : 's') . ' emailed once.' . (fabo_event_mail_off('committee') ? ' (Event Management emails are off: dashboard notices only.)' : ''));
     return $n;
 }
 
@@ -1429,7 +1431,7 @@ function fabo_cm_autoremind_scope(int $scope, array $cfg): int
     }
     fabo_setting_put('cm_autoremind_last', json_encode($last));
     $log($names
-        ? count($names) . ' member' . (count($names) === 1 ? '' : 's') . ' emailed about ' . count($events)
+        ? count($names) . ' member' . (count($names) === 1 ? '' : 's') . (fabo_event_mail_off('committee reminder') ? ' reminded on their dashboard (no email: Event Management mail is off) about ' : ' emailed about ') . count($events)
           . ' pending event' . (count($events) === 1 ? '' : 's') . ': ' . implode(', ', $names) . '.'
         : 'nobody due: every member owing a vote was reminded within the last ' . $cfg['every'] . ' day'
           . ($cfg['every'] === 1 ? '' : 's') . ' (or has no email address).');

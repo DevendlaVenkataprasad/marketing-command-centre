@@ -123,30 +123,14 @@ function inc_exec(string $sql, string $types = '', array $params = []): int
  * Which organisation's Incubation Management a viewer works in, or -1 for none.
  *
  *   administrator, and our own staff (team, no parent)  -> 0
- *   a client head (client, no parent)                   -> their own id
- *   a client head's team member (team, parent = head)   -> the head's id
+ *   any client (ours, or a client's own client)         -> their own id
+ *   a client's team member (team, parent = that client) -> that client's id
  *
- * Anyone else -- a client's own clients, say -- has no Incubation Management.
+ * See fabo_module_org() in lib/auth.php: every module answers the same way.
  */
 function inc_org_of(array $viewer): int
 {
-    if (!empty($viewer['is_admin'])) {
-        return 0;
-    }
-    $c = $viewer['client'] ?? null;
-    if (!$c || empty($c['id'])) {
-        return -1;
-    }
-    $kind   = (string) ($c['kind'] ?? '');
-    $parent = (int) ($c['parent_id'] ?? 0);
-    if ($parent === 0) {
-        return $kind === 'team' ? 0 : ($kind === 'client' ? (int) $c['id'] : -1);
-    }
-    if ($kind !== 'team') {
-        return -1;
-    }
-    $head = fabo_one('SELECT id, kind, parent_id FROM clients WHERE id = ?', 'i', [$parent]);
-    return $head && $head['kind'] === 'client' && empty($head['parent_id']) ? (int) $head['id'] : -1;
+    return fabo_module_org($viewer);
 }
 
 /**
@@ -163,10 +147,8 @@ function inc_org_enabled(int $org, ?string $kind = null): bool
     if ($org < 0) {
         return false;
     }
-    $head = fabo_one('SELECT c.id FROM clients c JOIN client_sheet_access a ON a.client_id = c.id AND a.sheet_key = ?
-                       WHERE c.id = ? AND c.kind = "client" AND c.parent_id IS NULL AND c.revoked_at IS NULL
-                         AND a.permission IN ("view","edit")', 'si', [inc_grant_key($kind), $org]);
-    return (bool) $head;
+    // Its head holds it now, and so does every client above it.
+    return fabo_head_module_permission($org, inc_grant_key($kind)) !== 'none';
 }
 
 /** Client organisations that have opened their Incubation Management (their tables exist). */

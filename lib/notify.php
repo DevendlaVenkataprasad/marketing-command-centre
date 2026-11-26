@@ -707,6 +707,9 @@ function fabo_announce_requests(array $people, string $sheetKey, int $rowId, str
         $messages[$id] = ['to'   => (string) ($person['email'] ?? ''),
                           'subject' => $subject, 'body' => $body, 'html' => $html];
     }
+    if (fabo_event_mail_off('', $sheetKey)) {         // the notices above still went
+        return array_fill_keys(array_keys($messages), [false, FABO_EVENT_MAIL_OFF_WHY]);
+    }
     try {
         return fabo_smtp_send_many($messages, fabo_sender_for($actor));
     } catch (Throwable $e) {
@@ -811,6 +814,9 @@ function fabo_announce_request(array $person, string $sheetKey, int $rowId, stri
 {
     [$subject, $body, $html] = fabo_request_message($person, $sheetKey, $rowId, $title, $note, $actor);
     fabo_notify_request($person, $sheetKey, $rowId, $title, $note);
+    if (fabo_event_mail_off('', $sheetKey)) {
+        return [false, FABO_EVENT_MAIL_OFF_WHY, $subject, $body];
+    }
     [$sent, $detail] = fabo_send_mail((string) ($person['email'] ?? ''), $subject, $body, $actor, $html);
     return [$sent, $detail, $subject, $body];
 }
@@ -1005,7 +1011,7 @@ function fabo_announce_decision(array $request, string $sheetKey, int $rowId, st
         }
     }
 
-    if (!$messages) {
+    if (!$messages || fabo_event_mail_off('', $sheetKey)) {   // the notices above still went
         return [];
     }
     try {
@@ -1083,7 +1089,7 @@ function fabo_announce_delete_request(array $req, array $viewer): array
         $messages[$headId] = ['to' => $to, 'subject' => $subject,
                               'body' => $body, 'html' => $html];
     }
-    if (!$messages) {
+    if (!$messages || fabo_event_mail_off('', (string) ($req['sheet_key'] ?? ''))) {   // the notice above still went
         return [];
     }
     try {
@@ -1116,6 +1122,9 @@ function fabo_announce_delete_decision(array $req, string $state, string $note):
            . ($note !== '' ? ' ' . $note : '');
 
     fabo_notify($clientId, $title, $short, '');
+    if (fabo_event_mail_off('', (string) ($req['sheet_key'] ?? ''))) {
+        return [false, FABO_EVENT_MAIL_OFF_WHY];
+    }
 
     require_once __DIR__ . '/mailtpl.php';
 

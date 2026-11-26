@@ -1999,7 +1999,9 @@ function iv_form_by_token(string $token): ?array
 
 /**
  * Saves a form's title, intro and questions. $rows: [[uid, label, help, type, required], ...].
- * The Gem's questions may be reworded but not removed: they are what the AI scores.
+ * The owner's questions (the Gem's: what the AI scores) are locked: they are
+ * always the round's Gem as the owner set it, first on the form, whatever is
+ * posted for them. A HoD only adds, edits and removes their own questions.
  */
 function iv_form_save(int $org, int $formId, string $title, string $intro, array $rows, bool $open): void
 {
@@ -2011,15 +2013,19 @@ function iv_form_save(int $org, int $formId, string $title, string $intro, array
     foreach (iv_form_questions($f) as $q) {
         $old[$q['uid']] = $q;
     }
-    $qs = [];
+    $locked = iv_form_locked_questions($org, $f);
+    $qs = $locked;
     $seen = [];
+    foreach ($locked as $q) {
+        $seen[$q['uid']] = true;
+    }
     foreach ($rows as $r) {
         $label = iv_clean($r['label'] ?? '', 255);
         $uid = preg_replace('/[^a-z0-9_]/', '', (string) ($r['uid'] ?? ''));
+        if ($uid !== '' && (!empty($old[$uid]['gem']) || str_starts_with($uid, 'g_'))) {
+            continue;                       // an owner's question: never changed here
+        }
         if ($label === '') {
-            if ($uid !== '' && !empty($old[$uid]['gem'])) {
-                throw new InvalidArgumentException('"' . $old[$uid]['label'] . '" is a question the Gem scores: reword it, but keep it.');
-            }
             continue;
         }
         if ($uid === '' || !isset($old[$uid]) || isset($seen[$uid])) {
@@ -2028,12 +2034,7 @@ function iv_form_save(int $org, int $formId, string $title, string $intro, array
         $seen[$uid] = true;
         $qs[] = ['uid' => $uid, 'label' => $label, 'help' => iv_text($r['help'] ?? '', 1000),
                  'type' => isset(iv_question_types()[$r['type'] ?? '']) ? $r['type'] : 'long',
-                 'required' => !empty($r['required']) || !empty($old[$uid]['gem']), 'gem' => !empty($old[$uid]['gem'])];
-    }
-    foreach ($old as $uid => $q) {
-        if (!empty($q['gem']) && !isset($seen[$uid])) {
-            throw new InvalidArgumentException('"' . $q['label'] . '" is a question the Gem scores: reword it, but keep it.');
-        }
+                 'required' => !empty($r['required']), 'gem' => false];
     }
     if (!$qs) {
         throw new InvalidArgumentException('Keep at least one question.');
@@ -2044,6 +2045,23 @@ function iv_form_save(int $org, int $formId, string $title, string $intro, array
     $title = iv_clean($title, 190) ?: $f['title'];
     fabo_exec('UPDATE iv_forms SET title = ?, intro = ?, questions_json = ?, is_open = ? WHERE id = ?', 'sssii',
               [$title, iv_text($intro, 3000), json_encode($qs, JSON_UNESCAPED_UNICODE), $open ? 1 : 0, $formId]);
+}
+
+/**
+ * The owner's questions on a form: the round's Gem as it is now, or, with no
+ * Gem on the round, the Gem questions the form already holds, untouched.
+ */
+function iv_form_locked_questions(int $org, array $form): array
+{
+    $round = iv_round($org, (int) $form['round_id']);
+    if ($round && $round['gem_id']) {
+        require_once __DIR__ . '/gem.php';
+        $gem = iv_gem($org, (int) $round['gem_id']);
+        if ($gem && $gem['fields']) {
+            return array_map('iv_gem_form_question', $gem['fields']);
+        }
+    }
+    return array_values(array_filter(iv_form_questions($form), static fn($q) => !empty($q['gem'])));
 }
 
 /* ================================================================= ideas */

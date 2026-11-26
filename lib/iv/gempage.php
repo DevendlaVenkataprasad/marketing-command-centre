@@ -134,7 +134,7 @@ function iv_gem_editor(int $org, ?array $gem, ?array $draft, array $u): void
        . '<label class="field wide"><span>Scoring criteria — one per line: Name | weight | what it looks for</span>'
        . '<textarea name="criteria" rows="9" required data-crit>' . e($crit) . '</textarea>'
        . '<small>The weights add up to the maximum score: <strong data-crit-total>' . e(iv_gem_crit_total($crit)) . '</strong>. The AI marks each criterion up to its weight; the total is added up here, so no reply can go over.</small></label>'
-       . '<h3>Questions students answer</h3><p class="muted sm">They go on every department\'s form in rounds using this Gem, marked <span class="iv-pill g-team">Gem</span>. Heads may reword them and add their own, not remove them.</p>'
+       . '<h3>Questions students answer</h3><p class="muted sm">They go on every department\'s form in rounds using this Gem, marked <span class="iv-pill g-team">Set by the owner</span>. Heads cannot change or remove them; they can only add their own questions after them.</p>'
        . '<ol class="iv-qs" data-qs>';
     foreach (array_values($qs) as $n => $q) {
         echo iv_gem_q_row((string) $n, $q);

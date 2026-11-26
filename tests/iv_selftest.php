@@ -321,16 +321,29 @@ eq(count($qs), 4, 'a department form starts with the Gem\'s 4 questions');
 ok(!empty($qs[0]['gem']) && $qs[0]['required'], 'Gem questions are marked and required');
 eq(iv_form_for(A, $round, $cm)['id'], $form['id'], 'one form per department per round');
 
-// The HoD rewords a Gem question, adds one, cannot drop a Gem one.
+// The owner's (Gem) questions are locked: a HoD's rewording, removal or optional tick is ignored; their own question is added.
+$ownerLabel = $qs[0]['label'];
 $rows = array_map(static fn($q) => ['uid' => $q['uid'], 'label' => $q['label'], 'help' => $q['help'], 'type' => $q['type'], 'required' => 1], $qs);
 $rows[0]['label'] = 'What problem are you solving?';
+$rows[1]['required'] = 0;
+$rows[1]['type'] = 'number';
 $rows[] = ['uid' => '', 'label' => 'Team size', 'type' => 'number', 'required' => 0];
 iv_form_save(A, (int) $form['id'], 'CM ideas', 'Hello students', $rows, true);
 $form = iv_form_for(A, $round, $cm);
-eq([count(iv_form_questions($form)), iv_form_questions($form)[0]['label'], (bool) iv_form_questions($form)[0]['gem']], [5, 'What problem are you solving?', true], 'reworded, one added, still a Gem question');
+$fq = iv_form_questions($form);
+eq([count($fq), $fq[0]['label'], (bool) $fq[0]['gem'], $fq[1]['type'], $fq[1]['required'], $fq[4]['label'], $fq[4]['gem']], [5, $ownerLabel, true, $qs[1]['type'], true, 'Team size', false],
+   'the owner\'s questions stay as the owner wrote them; the HoD\'s own one is added');
 $drop = $rows;
 array_shift($drop);
-throws(static fn() => iv_form_save(A, (int) $form['id'], 'x', '', $drop, true), 'a Gem question cannot be removed', 'Gem scores');
+$drop[0]['uid'] = 'g_forged';
+iv_form_save(A, (int) $form['id'], 'CM ideas', 'Hello students', $drop, true);
+$fq = iv_form_questions(iv_form_for(A, $round, $cm));
+eq([count($fq), $fq[0]['label'], count(array_filter($fq, static fn($q) => !empty($q['gem'])))], [5, $ownerLabel, 4], 'leaving an owner\'s question out, or forging one, changes nothing');
+iv_form_save(A, (int) $form['id'], 'CM ideas', 'Hello students', [['uid' => $fq[4]['uid'], 'label' => 'Team size (max 4)', 'type' => 'number']], true);
+$fq = iv_form_questions(iv_form_for(A, $round, $cm));
+eq([count($fq), $fq[4]['label'], $fq[4]['uid']], [5, 'Team size (max 4)', $fq[4]['uid']], 'a HoD edits their own question, keeping its uid');
+$formHtml = (static function () use ($fq) { $h = ''; foreach ($fq as $n => $q) { $h .= iv_portal_q_row((string) $n, $q); } return $h; })();
+ok(substr_count($formHtml, 'Set by the owner') === 4 && !preg_match('/name="q\[[0-3]\]/', $formHtml) && str_contains($formHtml, 'name="q[4][label]"'), 'the HoD form shows the owner\'s questions with no inputs');
 
 /* ================================================================= ideas */
 $ans = [];
@@ -426,7 +439,7 @@ iv_hod_limit_set(A, $hCm, 0);
 throws(static fn() => iv_run_own(A, iv_idea(A, $i3), $round, iv_hod(A, $hCm), 'Gemini', $reply(iv_idea(A, $i3), $marks), 'x'), 'a limit of 0 switches AI off', 'switched off');
 iv_hod_limit_set(A, $hCm, null);
 $prompt = iv_prompt($gem, iv_idea(A, $i3));
-ok(str_contains($prompt, 'RUBRIC (total 100 points)') && str_contains($prompt, 'Solar dryer') && str_contains($prompt, 'What problem are you solving?'), 'the own-tool prompt holds the rubric, the title and the answers');
+ok(str_contains($prompt, 'RUBRIC (total 100 points)') && str_contains($prompt, 'Solar dryer') && str_contains($prompt, $ownerLabel), 'the own-tool prompt holds the rubric, the title and the answers');
 
 /* ============================================================ decisions */
 $actor = 'Dr. Kumar (HoD)';

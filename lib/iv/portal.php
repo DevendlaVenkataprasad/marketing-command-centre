@@ -529,7 +529,7 @@ function iv_portal_view_form(int $org, array $me, array $dept, ?array $round): v
     $qs = iv_form_questions($form);
     $url = iv_form_url($org, $form['token']);
     echo '<section class="iv-card"><div class="iv-card-h"><h2>Idea form · ' . e($round['name']) . '</h2><a class="btn btn-sm" href="' . e($url) . '" target="_blank" rel="noopener">Preview ↗</a></div>'
-       . '<p class="muted">Students also give their name, PIN / roll number, email, phone and an idea title. Questions marked <span class="iv-pill g-team">Gem</span> are what the AI scores: you can reword them, not remove them.</p>'
+       . '<p class="muted">Students also give their name, PIN / roll number, email, phone and an idea title. Questions marked <span class="iv-pill g-team">Set by the owner</span> are what the AI scores: they stay exactly as the owner wrote them. You can add your own questions below them.</p>'
        . iv_copy($url) . '</section>';
     echo '<form method="post" class="iv-form iv-card" id="formBuilder">' . fabo_csrf_field() . '<input type="hidden" name="a" value="form-save"><input type="hidden" name="round" value="' . (int) $round['id'] . '">'
        . '<label class="field"><span>Title</span><input name="title" maxlength="190" value="' . e($form['title']) . '"></label>'
@@ -547,6 +547,12 @@ function iv_portal_view_form(int $org, array $me, array $dept, ?array $round): v
 function iv_portal_q_row(string $n, array $q): string
 {
     $gem = !empty($q['gem']);
+    if ($gem) {
+        // The owner's question: shown, never sent back, so it cannot be changed here.
+        return '<li class="iv-q gem locked"><div class="iv-qlock"><span class="iv-pill g-team">Set by the owner</span> <span class="muted sm">' . e(iv_question_types()[$q['type'] ?? 'long'] ?? 'Paragraph')
+             . (!empty($q['required']) ? ' · required' : ' · optional') . '</span></div><strong>' . e($q['label']) . '</strong>'
+             . (trim((string) ($q['help'] ?? '')) !== '' ? '<p class="muted sm">' . nl2br(e((string) $q['help'])) . '</p>' : '') . '</li>';
+    }
     $h = '<li class="iv-q' . ($gem ? ' gem' : '') . '"><input type="hidden" name="q[' . e($n) . '][uid]" value="' . e((string) $q['uid']) . '"><div class="iv-fields">'
        . '<label class="field wide"><span>Question ' . ($gem ? '<span class="iv-pill g-team">Gem</span>' : '') . '</span><input name="q[' . e($n) . '][label]" maxlength="255" value="' . e($q['label']) . '"' . ($gem ? ' required' : '') . '></label>'
        . '<label class="field wide"><span>Help for the student</span><textarea name="q[' . e($n) . '][help]" rows="2" maxlength="1000">' . e((string) ($q['help'] ?? '')) . '</textarea></label>'

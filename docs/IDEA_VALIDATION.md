@@ -21,7 +21,7 @@ Heads of Department (HoDs) validate their students' ideas with the Gem the owner
 
 **Head of Department** (sees only their own department):
 - **Share the form.** Copy the link, or share it on WhatsApp or by email.
-- **Edit the questions.** The Gem's questions can be reworded but not removed, because they are what the AI scores. Other questions can be added. The form can be paused.
+- **Edit the questions.** The owner's (Gem) questions are locked, marked "Set by the owner": a HoD cannot reword, remove or make them optional, because they are what the AI scores. `iv_form_save()` always rebuilds them from the round's Gem (`iv_form_locked_questions()`) and ignores anything posted for them. HoDs can add, edit and remove their own questions after them. The form can be paused.
 - **Check an idea with AI**, in either of two ways. Both count towards the limit:
   - **In the portal** ("Check this idea now"). Gemini is called with our key. A busy or unreadable reply is not counted.
   - **Your own AI tool** (only when the round allows it). "Copy & open Gemini / ChatGPT" puts the prompt on the clipboard and opens the tool. The HoD pastes the whole reply back; the page reads the marks as they paste and shows the total before they save. Marks cannot be typed in.
@@ -61,7 +61,7 @@ How students are matched:
 - **Placing them.** A diploma PIN (`YYCCC-BR-NNN`) puts the student in the department whose branch code is `BR` (see `iv_branch_names()`, from the AP SBTET codes). An answer like "155 GOVT POLYTECHNIC, PILLARIPATTU" is read as college code 155 plus its name.
 - **Re-running is safe.** Imports and uploads update the existing rows and never add second ones.
 
-The Gem is **read from Incubation Management → Gems** of the same organisation. It is never copied, so editing it there changes it here too.
+The Gem is the organisation's Incubation Gem, edited in place on **Startup Discovery → Gems** (`lib/iv/gempage.php`) or in Incubation Management → Gems; it is never copied. The Gems page edits instructions, rubric and questions, copies a Gem (switched off), switches it on or off, pushes new questions to the department forms (`iv_gem_sync_forms()`), and runs a trial score on a sample idea (`iv_gem_try()`, nothing saved). An organisation without Incubation gets its tables and Gem 1 from "Start with Gem 1". A plain-language guide for owners and HoDs is `docs/Startup-Discovery-Guide.pdf` (source: the `.html` beside it).
 
 ## Files
 

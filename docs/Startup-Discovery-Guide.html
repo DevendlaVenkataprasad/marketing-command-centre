@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Startup Discovery — Guide</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 18mm; }
+  :root { --ink: #16212e; --soft: #4a5868; --mute: #77838f; --line: #dfe4ea; --bg: #f5f7fa;
+          --accent: #1f5fd6; --accent-sf: #eaf1fd; --gem: #0f7f73; --gem-sf: #e6f5f2; --amber: #a86300; --amber-sf: #fdf3e3; --red: #b42318; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; color: var(--ink); font-size: 10.4pt; line-height: 1.5; background: #fff; }
+  h1, h2, h3 { line-height: 1.2; margin: 0; }
+  h2 { font-size: 17pt; margin: 0 0 4mm; padding-bottom: 2mm; border-bottom: 2px solid var(--ink); }
+  h2 .n { color: var(--accent); margin-right: 6px; }
+  h3 { font-size: 11.6pt; margin: 5mm 0 2mm; }
+  p { margin: 0 0 2.6mm; }
+  ul, ol { margin: 0 0 3mm; padding-left: 5mm; }
+  li { margin: 0 0 1.2mm; }
+  section { break-before: page; }
+  .keep { break-inside: avoid; }
+  .lead { font-size: 11.2pt; color: var(--soft); }
+  .muted { color: var(--mute); }
+  .sm { font-size: 9pt; }
+  b, strong { font-weight: 650; }
+
+  /* cover */
+  .cover { height: 250mm; display: flex; flex-direction: column; justify-content: space-between; break-after: page; }
+  .cover .top { padding-top: 30mm; }
+  .eyebrow { font-size: 9pt; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+  .cover h1 { font-size: 38pt; letter-spacing: -.02em; margin: 4mm 0 5mm; }
+  .cover .sub { font-size: 14pt; color: var(--soft); max-width: 150mm; }
+  .cover .gemline { margin-top: 12mm; display: inline-flex; gap: 3mm; align-items: center; padding: 3mm 5mm; border-radius: 3mm; background: var(--gem-sf); color: var(--gem); font-weight: 600; }
+  .cover .who { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; }
+  .cover .who div { border-top: 3px solid var(--accent); padding-top: 3mm; }
+  .cover .who div:nth-child(2) { border-color: var(--gem); }
+  .cover .who div:nth-child(3) { border-color: var(--amber); }
+  .cover .who strong { display: block; font-size: 11pt; }
+  .cover .foot { border-top: 1px solid var(--line); padding-top: 3mm; display: flex; justify-content: space-between; color: var(--mute); font-size: 9pt; }
+
+  /* contents */
+  .toc { list-style: none; padding: 0; margin: 6mm 0 0; counter-reset: t; }
+  .toc li { display: flex; gap: 4mm; padding: 2.6mm 0; border-bottom: 1px solid var(--line); font-size: 11pt; }
+  .toc li span:first-child { color: var(--accent); font-weight: 700; width: 8mm; }
+  .toc li em { margin-left: auto; color: var(--mute); font-style: normal; font-size: 9.5pt; }
+
+  /* flow */
+  .flow { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2.2mm; margin: 4mm 0 5mm; }
+  .flow div { position: relative; border: 1px solid var(--line); border-radius: 2.5mm; padding: 2.6mm 2.4mm; background: var(--bg); font-size: 8.8pt; line-height: 1.35; }
+  .flow div b { display: block; font-size: 9.4pt; margin-bottom: 1mm; }
+  .flow div i { display: block; font-style: normal; font-size: 7.6pt; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 1mm; }
+  .flow .o { border-top: 3px solid var(--accent); } .flow .o i { color: var(--accent); }
+  .flow .h { border-top: 3px solid var(--gem); } .flow .h i { color: var(--gem); }
+  .flow .s { border-top: 3px solid var(--amber); } .flow .s i { color: var(--amber); }
+  .flow .g { border-top: 3px solid var(--gem); background: var(--gem-sf); } .flow .g i { color: var(--gem); }
+
+  /* tables */
+  table { width: 100%; border-collapse: collapse; margin: 1mm 0 4mm; font-size: 9.6pt; }
+  th { text-align: left; font-size: 8.4pt; text-transform: uppercase; letter-spacing: .06em; color: var(--soft); border-bottom: 1.5px solid var(--ink); padding: 1.8mm 2mm; }
+  td { border-bottom: 1px solid var(--line); padding: 2mm; vertical-align: top; }
+  td.n, th.n { text-align: right; white-space: nowrap; }
+  tr { break-inside: avoid; }
+  tfoot td { font-weight: 700; border-bottom: 0; border-top: 1.5px solid var(--ink); }
+
+  /* callouts */
+  .note { border-left: 3px solid var(--accent); background: var(--accent-sf); padding: 3mm 4mm; border-radius: 0 2mm 2mm 0; margin: 3mm 0 4mm; }
+  .note.gem { border-color: var(--gem); background: var(--gem-sf); }
+  .note.warn { border-color: var(--amber); background: var(--amber-sf); }
+  .note p:last-child, .note ul:last-child { margin-bottom: 0; }
+  .note .t { display: block; font-weight: 700; margin-bottom: 1mm; }
+
+  /* steps */
+  .steps { list-style: none; padding: 0; margin: 2mm 0 4mm; counter-reset: s; }
+  .steps > li { counter-increment: s; position: relative; padding: 0 0 3.2mm 11mm; break-inside: avoid; }
+  .steps > li::before { content: counter(s); position: absolute; left: 0; top: -.4mm; width: 7mm; height: 7mm; border-radius: 50%; background: var(--ink); color: #fff;
+                        font-weight: 700; font-size: 9pt; display: flex; align-items: center; justify-content: center; }
+  .steps.gem > li::before { background: var(--gem); }
+  .steps.hod > li::before { background: var(--gem); }
+  .steps > li > b:first-child { display: block; font-size: 10.8pt; margin-bottom: .6mm; }
+  .steps ul { margin-top: 1mm; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
+  .card { border: 1px solid var(--line); border-radius: 2.5mm; padding: 3.4mm 4mm; break-inside: avoid; }
+  .card h3 { margin-top: 0; }
+  .pill { display: inline-block; padding: .3mm 2.2mm; border-radius: 9mm; font-size: 8.4pt; font-weight: 600; background: var(--gem-sf); color: var(--gem); white-space: nowrap; }
+  .pill.b { background: var(--accent-sf); color: var(--accent); }
+  .pill.a { background: var(--amber-sf); color: var(--amber); }
+  .pill.g { background: #eef0f3; color: var(--soft); }
+
+  /* gem anatomy */
+  .anatomy { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm; margin: 3mm 0 4mm; }
+  .anatomy div { border: 1.5px solid var(--gem); border-radius: 2.5mm; padding: 3mm; background: #fff; }
+  .anatomy div b { display: block; color: var(--gem); font-size: 10.6pt; margin-bottom: 1mm; }
+  .anatomy div span { font-size: 9pt; color: var(--soft); }
+
+  .stages { display: flex; gap: 1.6mm; flex-wrap: wrap; margin: 3mm 0 4mm; }
+  .stages span { padding: 1.8mm 3mm; border-radius: 1.6mm; background: var(--bg); border: 1px solid var(--line); font-size: 9pt; font-weight: 600; }
+  .stages span.end { background: var(--gem-sf); border-color: #b4e2dc; color: var(--gem); }
+  .stages span.no { background: #fbeceb; border-color: #f4c5c1; color: var(--red); }
+  .stages em { font-style: normal; color: var(--mute); align-self: center; }
+
+  .scorebox { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3mm; margin: 3mm 0 4mm; }
+  .scorebox div { border-radius: 2.5mm; padding: 3mm; background: var(--bg); text-align: center; }
+  .scorebox strong { display: block; font-size: 16pt; color: var(--gem); }
+  .scorebox span { font-size: 8.6pt; color: var(--soft); }
+</style>
+</head>
+<body>
+
+<!-- ================================================================ cover -->
+<div class="cover">
+  <div class="top">
+    <div class="eyebrow">Marketing Command Centre · Module guide</div>
+    <h1>Startup Discovery</h1>
+    <p class="sub">How the Higher Education owner and the Heads of Department find the best student ideas: from the student's form, through the AI Gem's scores and the HoD's top picks, to one pipeline where the owner forms a team for each project.</p>
+    <div class="gemline">◆ The Gem: the AI rubric that scores every idea</div>
+  </div>
+  <div>
+    <div class="who">
+      <div><strong>Owner</strong><span class="muted sm">The Higher Education client's desk: Gems, rounds, HoD dashboards, students, pipeline and teams.</span></div>
+      <div><strong>Head of Department</strong><span class="muted sm">The HoD portal: share the form, check ideas with the Gem, decide, send the top picks.</span></div>
+      <div><strong>Student</strong><span class="muted sm">The idea form: one link per department per round, no sign-in.</span></div>
+    </div>
+    <div class="foot" style="margin-top:10mm"><span>Startup Discovery · Owner and HoD guide</span><span>November 2026</span></div>
+  </div>
+</div>
+
+<!-- ============================================================== contents -->
+<div style="break-after: page">
+  <div class="eyebrow">Contents</div>
+  <ol class="toc">
+    <li><span>1</span>The module at a glance<em>who does what, end to end</em></li>
+    <li><span>2</span>The Gem<em>what it is, how it scores, the Gems page</em></li>
+    <li><span>3</span>The owner's workflow<em>Higher Education client portal</em></li>
+    <li><span>4</span>The Head of Department's workflow<em>HoD portal</em></li>
+    <li><span>5</span>The student's form<em>what students see and send</em></li>
+    <li><span>6</span>Pipeline and teams<em>after the HoDs send their picks</em></li>
+    <li><span>7</span>Fair scoring: how HoDs are kept honest<em>integrity rules</em></li>
+    <li><span>8</span>Quick reference<em>settings, defaults, common questions</em></li>
+  </ol>
+  <div class="note" style="margin-top:10mm">
+    <span class="t">Words used in this guide</span>
+    <ul>
+      <li><b>Owner</b>: the Higher Education client (and the team members they give the module to). Runs the programme.</li>
+      <li><b>HoD</b>: a Head of Department, with one dashboard per department of a college.</li>
+      <li><b>Round</b>: one submission window, for example "Idea round 2026-27", with its own Gem, dates and limits.</li>
+      <li><b>Gem</b>: the AI's set-up that scores the ideas: its instructions, a weighted rubric and the questions students answer.</li>
+      <li><b>AI check</b>: one scoring of one idea by the Gem.</li>
+      <li><b>Top picks</b>: the ideas a HoD ranks and sends forward to the owner (3 per department by default).</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============================================================ 1 glance -->
+<section style="break-before:auto">
+  <h2><span class="n">1</span>The module at a glance</h2>
+  <p class="lead">Startup Discovery turns thousands of student ideas into a short, fairly scored list of projects, without the owner reading every idea. The HoDs do the first sift in their own departments; the Gem keeps the scoring consistent across every college.</p>
+
+  <div class="flow">
+    <div class="o"><i>Owner</i><b>Sets up</b>Gem, HoD dashboards, students, a round.</div>
+    <div class="h"><i>HoD</i><b>Shares the form</b>One link for the department.</div>
+    <div class="s"><i>Student</i><b>Sends an idea</b>Answers the Gem's questions.</div>
+    <div class="g"><i>Gem</i><b>Scores it</b>Marks per criterion, reasons, tips.</div>
+    <div class="h"><i>HoD</i><b>Decides &amp; ranks</b>Validates, sends the top 3.</div>
+    <div class="o"><i>Owner</i><b>Pipeline &amp; teams</b>Reviews, forms teams, selects.</div>
+  </div>
+
+  <h3>Who uses which part</h3>
+  <table>
+    <thead><tr><th style="width:22%">Part</th><th style="width:22%">Who</th><th>How they get in</th></tr></thead>
+    <tbody>
+      <tr><td><b>Startup Discovery</b> (owner desk)</td><td>The Higher Education client and their team</td><td>Signed in to the portal, menu item <b>Startup Discovery</b>. The administrator ticks the module for the client on Clients; the client can pass it to their team (Can edit or View only).</td></tr>
+      <tr><td><b>HoD portal</b></td><td>Each Head of Department</td><td>Their own email and password, not a staff login. The first sign-in link comes by email from the owner; it works once, for 7 days. "Forgot your password, or never set one?" sends a new one.</td></tr>
+      <tr><td><b>Idea form</b></td><td>Students</td><td>A link the HoD shares (WhatsApp, email, notice board). No sign-in. One form per department per round.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>The owner desk: its pages</h3>
+  <table>
+    <tbody>
+      <tr><td style="width:26%"><b>Overview</b></td><td>The current round, every department's progress, the HoD sign-in address.</td></tr>
+      <tr><td><b>HoD dashboards</b></td><td>One per department, with its Head. Add one, or upload a sheet of many; send sign-in links.</td></tr>
+      <tr><td><b>Students</b></td><td>Every student once, however many times they were imported. Upload a sheet or add one.</td></tr>
+      <tr><td><b>Rounds &amp; timing</b></td><td>When students may submit, which Gem scores the ideas, AI checks per idea, top ideas per department.</td></tr>
+      <tr><td><b>Gems</b></td><td>The Gems themselves: instructions, rubric, questions, a trial run on a sample idea.</td></tr>
+      <tr><td><b>All ideas</b></td><td>Every idea of a round, any department, with its decision and score.</td></tr>
+      <tr><td><b>Pipeline &amp; teams</b></td><td>The ideas HoDs sent forward, by stage. Open one to assign its team.</td></tr>
+      <tr><td><b>Import</b></td><td>Bring in students already registered through Incubation Management.</td></tr>
+      <tr><td><b>Settings &amp; audit</b></td><td>The HoD sign-in address, colleges and schools, and who changed what.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================== 2 gem -->
+<section>
+  <h2><span class="n">2</span>The Gem</h2>
+  <p class="lead">The Gem is the heart of Startup Discovery. It is the same idea as a Gem in Google Gemini: a saved set-up that tells the AI who it is and how to judge. Every idea in a round is scored by that round's Gem, so a student in one college is judged exactly like a student in another.</p>
+
+  <div class="anatomy">
+    <div><b>1 · Instructions</b><span>The AI's role: who it is, whose ideas it reads (for example diploma students in Andhra Pradesh), how strict to be, what to reward and what to penalise.</span></div>
+    <div><b>2 · Rubric</b><span>The criteria it marks, each with a weight. The weights add up to the maximum score (100 for Gem 1). Each criterion says what it looks for.</span></div>
+    <div><b>3 · Questions</b><span>What students answer on the form. They are set by the owner, go on every department's form, and are what the AI reads.</span></div>
+  </div>
+
+  <h3>Gem 1 – Idea Evaluation (ready-made)</h3>
+  <p>Every organisation starts with Gem 1. It is written for polytechnic (diploma) student ideas and can be changed in every detail.</p>
+  <table class="keep">
+    <thead><tr><th>Criterion</th><th>What it looks for</th><th class="n">Weight</th></tr></thead>
+    <tbody>
+      <tr><td><b>Problem clarity and relevance</b></td><td>A real, specific problem: who suffers, how often, how badly.</td><td class="n">20</td></tr>
+      <tr><td><b>Solution fit and logic</b></td><td>Does the solution address the stated problem, and does it make sense?</td><td class="n">15</td></tr>
+      <tr><td><b>Originality</b></td><td>Different from the common ideas, or a meaningful twist on them.</td><td class="n">15</td></tr>
+      <tr><td><b>Technical feasibility at diploma level</b></td><td>Can the team build a prototype with polytechnic lab resources and a modest budget?</td><td class="n">15</td></tr>
+      <tr><td><b>Impact and scale</b></td><td>How many people benefit; links to AP priorities such as agriculture, aquaculture, MSMEs, rural health, water.</td><td class="n">15</td></tr>
+      <tr><td><b>User understanding</b></td><td>Do they know who will use it, and have they talked to any of them?</td><td class="n">10</td></tr>
+      <tr><td><b>Sustainability and viability</b></td><td>Could it last beyond the event: cost savings, a buyer, a government or CSR adopter?</td><td class="n">5</td></tr>
+      <tr><td><b>Prototype readiness</b></td><td>A sketch, circuit, code or model already, or just an idea?</td><td class="n">5</td></tr>
+    </tbody>
+    <tfoot><tr><td colspan="2">Maximum score</td><td class="n">100</td></tr></tfoot>
+  </table>
+  <p class="sm muted">Gem 1's questions: Problem statement · Target users · What are you developing in the prototype? · USP — what makes your idea different?</p>
+
+  <h3>How a score is made</h3>
+  <ol class="steps gem">
+    <li><b>The Gem reads the idea.</b> The idea's title and every answer go to the AI together with the Gem's instructions and rubric.</li>
+    <li><b>It marks each criterion.</b> A whole or half mark from 0 up to the criterion's weight, with a one or two sentence reason quoting what the student wrote. It also gives a three-sentence summary and 3 to 5 concrete improvements.</li>
+    <li><b>The total is added up by the system, not by the AI.</b> Each mark is capped at its weight, so no reply can give more than the rubric allows.</li>
+    <li><b>The idea's score is the average of its checks.</b> Checking again does not replace the earlier score; it is averaged in.</li>
+  </ol>
+  <div class="scorebox">
+    <div><strong>2</strong><span>AI checks per idea (default; the owner sets it per round, and can give a HoD their own number; 0 switches AI off)</span></div>
+    <div><strong>Average</strong><span>of all checks is the idea's score, shown as e.g. 72 / 100</span></div>
+    <div><strong>Capped</strong><span>each mark at its weight; the system adds the total</span></div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">2</span>The Gem (continued)</h2>
+  <h3>Two ways a HoD can check an idea</h3>
+  <div class="grid2">
+    <div class="card">
+      <h3><span class="pill">Verified</span> In the portal</h3>
+      <p>"Check this idea now". The portal sends the idea to Gemini with the Gem and records the result. If the AI is busy or its reply cannot be read, the check is <b>not</b> counted against the limit.</p>
+    </div>
+    <div class="card">
+      <h3><span class="pill a">Own tool</span> The HoD's own AI tool</h3>
+      <p>Only if the round allows it. "Copy &amp; open Gemini / ChatGPT" copies the full prompt; the HoD pastes the AI's <b>whole reply</b> back. Marks cannot be typed in. The prompt carries a one-time <b>check code</b> the reply must return, and the reply is kept for the owner to read.</p>
+    </div>
+  </div>
+  <p class="sm muted">Both ways count towards the idea's limit. The owner can switch the own-tool way off for a round (Rounds &amp; timing → untick "HoDs may also use their own AI tool"), so every score comes from the portal.</p>
+
+  <h3>The Gems page (owner)</h3>
+  <p>Startup Discovery → <b>Gems</b>. Every Gem is shown as a card with its criteria, questions, maximum and the rounds using it. Open one to:</p>
+  <table>
+    <tbody>
+      <tr><td style="width:28%"><b>Edit the set-up</b></td><td>Name, instructions, rubric (one line per criterion: <i>Name | weight | what it looks for</i>, with the total shown as you type) and the questions (wording, help text, paragraph or short answer, required or optional).</td></tr>
+      <tr><td><b>Update the forms</b></td><td>Departments' forms copy the Gem's questions when they are first made. When you save, the box "Also put the new questions on N department forms" brings every form of the rounds using this Gem up to date. The page also warns "N still ask an older version", with an Update button. Ideas already sent keep the answers as they were given.</td></tr>
+      <tr><td><b>Try it on a sample idea</b></td><td>Type answers as a student would and see the marks, reasons and tips this Gem gives. Nothing is saved and no idea's limit is used. The best way to tune the instructions before a round opens.</td></tr>
+      <tr><td><b>Make a copy</b></td><td>A copy starts switched off, so it can be changed without touching the rounds that use the original (for example "Gem 2 – Validation" for a second round).</td></tr>
+      <tr><td><b>Switch on / off</b></td><td>An off Gem is not offered to new rounds; a round already using it keeps working.</td></tr>
+      <tr><td><b>Where it is used</b></td><td>Rounds, ideas, AI checks made, and the average score as a share of the maximum.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note gem">
+    <span class="t">The owner's questions are locked for HoDs</span>
+    <p>The Gem's questions appear on every department's form marked <span class="pill">Set by the owner</span>. A HoD cannot reword, remove or make them optional; they stay exactly as the owner wrote them, because they are what the AI scores. A HoD may add their own questions after them (for example "Team size") and edit or remove those.</p>
+  </div>
+  <div class="note warn">
+    <span class="t">Change the rubric before the round, not during it</span>
+    <p>A change scores <b>new</b> checks only; checks already made keep their marks. Changing the weights in the middle of a round makes early and late ideas harder to compare. Use "Try it on a sample idea" first, and make a copy for a later round.</p>
+  </div>
+  <p class="sm muted">If the organisation also runs Incubation Management, the Gems are shared: a change on either Gems page shows on both. Incubation's emails and stages are set in Incubation.</p>
+</section>
+
+<!-- ============================================================ 3 owner -->
+<section>
+  <h2><span class="n">3</span>The owner's workflow</h2>
+  <p class="lead">The Higher Education client's portal. Set up once per programme, then once per round.</p>
+
+  <h3>Setting up</h3>
+  <ol class="steps">
+    <li><b>Get the Gem ready</b> — Gems.
+      Start from Gem 1 or make your own. Read the instructions and rubric, and try it on two or three sample ideas.</li>
+    <li><b>Create the HoD dashboards</b> — HoD dashboards.
+      Upload the sheet of Heads with the columns <i>CODE, POLYTECHNIC, BRANCH, NAME OF THE HEAD OF SECTION, CONTACT NUMBER, EMAIL ID</i>, or add them one at a time. BRANCH may be a code (DCME, ECE) or a name ("Mechanical Engg."). College codes like 056 and 56 are the same college. Each department of a college is one dashboard, with one Head.</li>
+    <li><b>Bring in the students</b> — Students or Import.
+      Upload the POLY TECHFEST sheet (.csv or .xlsx), or import them from an Incubation form. Each student is kept once: matched on PIN / roll number first, then email, then phone; different names are never merged. A student joins their department's dashboard through the branch in their PIN (24045-<b>CM</b>-042 → Computer Engineering). The "Last upload" card shows new, already known, repeated and skipped rows.</li>
+    <li><b>Create the round</b> — Rounds &amp; timing.
+      Name, submission opens and closes, the date HoDs must send their top ideas by, the Gem, AI checks per idea (2), top ideas per department (3), whether students not on the list may submit, whether HoDs may use their own AI tool, and status (Draft is hidden from HoDs; Live; Closed).</li>
+    <li><b>Send the Heads their sign-in links</b> — from each dashboard, or many at once. The link is emailed, works once and for 7 days.</li>
+  </ol>
+
+  <h3>During the round</h3>
+  <ul>
+    <li><b>Overview</b> shows each department's progress: ideas received, checked, decided, picks sent.</li>
+    <li><b>A later deadline for one department</b>: open its dashboard and give it its own closing date.</li>
+    <li><b>A different AI limit for one Head</b>: set it on the dashboard (0 switches AI off for them).</li>
+    <li><b>All ideas</b>: every idea of the round, by department, with its decision and score.</li>
+    <li><b>Export</b>: lists can be downloaded as CSV.</li>
+  </ul>
+
+  <h3>After the HoDs send their picks</h3>
+  <ol class="steps" start="6">
+    <li><b>Review in the pipeline</b> — Pipeline &amp; teams. Each pick arrives with its rank, score, the HoD's note and an "⚑ to check" marker if anything looks unusual.</li>
+    <li><b>Verify with AI</b> where you want a second opinion: your own portal check, outside the HoD's limit, averaged into the score.</li>
+    <li><b>Form the team</b>: open the idea, find students, add them. A student is in one team per round.</li>
+    <li><b>Move it on</b>: Owner review → Team assigned → In development → Selected or Not taken forward. You can also hand a department's picks back to its HoD.</li>
+  </ol>
+</section>
+
+<!-- ============================================================== 4 hod -->
+<section>
+  <h2><span class="n">4</span>The Head of Department's workflow</h2>
+  <p class="lead">The HoD portal shows one department only: its form, its students and their ideas. Everything is on one dashboard, and it works on a phone.</p>
+
+  <ol class="steps hod">
+    <li><b>Sign in</b>
+      Open the link in the email, set a password, and sign in with your email from then on. Lost it? "Forgot your password, or never set one?" sends a new link (it works once, for 7 days).</li>
+    <li><b>Look at the form, then share it</b> — Form.
+      The owner's questions are already on it, marked <span class="pill">Set by the owner</span>; they cannot be changed. You may add your own questions after them, change the form's title and note to students, and pause the form. Copy the link, or share it on WhatsApp or by email, with your students.</li>
+    <li><b>Check ideas with the Gem</b> — open an idea.
+      <ul>
+        <li><b>Check this idea now</b>: the portal scores it (shown as <span class="pill">Verified</span>).</li>
+        <li><b>Your own AI tool</b>, if the round allows: copy the prompt, paste the AI's whole reply back; the page shows the total before you save.</li>
+        <li>Each idea has a limit (usually 2 checks). The score is the average of the checks. You see each criterion's mark, the reason, the summary and the improvements.</li>
+      </ul></li>
+    <li><b>Decide</b> — on the idea page, the Students page or the student panel.
+      Mark each idea <span class="pill">Validated</span>, <span class="pill g">Not taken</span> or leave it undecided, with a note. On the Students page, use the Validate button on a row, or tick several and decide them together. Filters: To validate · Validated · Not taken.</li>
+    <li><b>Rank and send the top picks</b> — Dashboard.
+      Rank up to the round's number (usually 3) of validated ideas. "Rank by AI score" fills the ranks in score order. If you rank an idea above a validated idea that scored higher, write why (15 characters or more); the owner sees your reason. Every pick needs at least one AI check. Then <b>Send</b>.</li>
+  </ol>
+  <div class="note warn">
+    <span class="t">After sending, decisions are final</span>
+    <p>Once the top picks are sent, the department's decisions cannot be changed, unless the owner hands the picks back.</p>
+  </div>
+
+  <h3>What the HoD sees</h3>
+  <table>
+    <tbody>
+      <tr><td style="width:26%"><b>Dashboard</b></td><td>The round, its dates, counts (received, checked, validated), the ideas, and the top-picks box.</td></tr>
+      <tr><td><b>Form</b></td><td>The link to share, the owner's locked questions, your own questions, pause.</td></tr>
+      <tr><td><b>Students</b></td><td>Your department's students and their ideas, with filters, search, Validate buttons and bulk decisions. A row opens the student in a side panel.</td></tr>
+      <tr><td><b>Idea</b></td><td>What the student wrote, the AI checks with marks and reasons, the decision.</td></tr>
+      <tr><td><b>Profile</b></td><td>Your details and your password.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================ 5 student -->
+<section>
+  <h2><span class="n">5</span>The student's form</h2>
+  <p class="lead">One page, no sign-in, on any phone.</p>
+  <div class="grid2">
+    <div class="card">
+      <h3>What the student gives</h3>
+      <ul>
+        <li>Name, PIN / roll number, email, phone</li>
+        <li>An idea title</li>
+        <li>The owner's Gem questions (required ones must be answered)</li>
+        <li>Any questions the HoD added</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Rules</h3>
+      <ul>
+        <li>The form is open only between the round's dates (or the department's own later date), and while the HoD has not paused it.</li>
+        <li>One idea per student per round; matched on PIN.</li>
+        <li>A student not on the list is accepted only if the round allows it, and then joins the department.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="note"><p>Tip for HoDs: ask students to answer each question in a few clear sentences: the problem, who has it, and what they will build. The Gem rewards specific answers and real users, not long ones; simple English is fine, since it judges the idea, not the language.</p></div>
+
+  <!-- ======================================================== 6 pipeline -->
+  <h2 style="margin-top:10mm"><span class="n">6</span>Pipeline and teams</h2>
+  <p>One board for all departments. Each card is a top pick, with its department, rank, score and HoD note.</p>
+  <div class="stages">
+    <span>Forwarded by HoD</span><em>→</em><span>Owner review</span><em>→</em><span>Team assigned</span><em>→</em><span>In development</span><em>→</em><span class="end">Selected</span><em>or</em><span class="no">Not taken forward</span>
+  </div>
+  <ul>
+    <li><b>Teams</b>: open an idea and add students to its team. A student can be on one team per round.</li>
+    <li><b>Notes</b>: each stage move can carry a note; the idea keeps its history.</li>
+    <li><b>Integrity</b>: cards show "⚑ n to check" when something needs a look (next page).</li>
+  </ul>
+</section>
+
+<!-- ========================================================== 7 integrity -->
+<section>
+  <h2><span class="n">7</span>Fair scoring: how HoDs are kept honest</h2>
+  <p class="lead">HoDs have every reason to push their own department's favourites. These rules make that hard, and make it visible to the owner when it happens.</p>
+  <table>
+    <thead><tr><th style="width:34%">Risk</th><th>What stops it</th></tr></thead>
+    <tbody>
+      <tr><td>Typing in high marks</td><td>Marks are never typed. Own-tool checks need the AI's whole reply, which is kept; the owner reads it under the check ("The reply as pasted").</td></tr>
+      <tr><td>Pasting a made-up or recycled reply</td><td>The prompt carries a one-time check code for that idea and that check. A reply without it, or one saved from another idea or an earlier check, is refused.</td></tr>
+      <tr><td>Re-checking until the score suits</td><td>A limit per idea (usually 2), and the score is the average of all checks, not the latest.</td></tr>
+      <tr><td>Changing the questions to steer students</td><td>The owner's Gem questions are locked on every form; HoDs can only add their own.</td></tr>
+      <tr><td>Any own-tool influence at all</td><td>The owner switches the own-tool way off for the round; every score then comes from the portal.</td></tr>
+      <tr><td>Sending favourites without evaluation</td><td>Every top pick needs at least one AI check.</td></tr>
+      <tr><td>Ranking a favourite above stronger ideas</td><td>The HoD must write why; the reason travels with the pick.</td></tr>
+      <tr><td>Anything else</td><td>The owner's <b>Integrity check</b> card on each idea: no AI check, own-tool score only, own-tool and portal scores far apart, validated under 40%, ranked against the scores, higher-scoring ideas marked Not taken, a student who was not on the list. The owner can <b>Verify with AI</b> at any time.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================ 8 reference -->
+<section>
+  <h2><span class="n">8</span>Quick reference</h2>
+  <h3>Round settings and defaults</h3>
+  <table>
+    <thead><tr><th style="width:38%">Setting</th><th style="width:20%">Default</th><th>Where to change it</th></tr></thead>
+    <tbody>
+      <tr><td>AI checks per idea</td><td>2</td><td>Rounds &amp; timing; one HoD's own number on their dashboard (0 = AI off)</td></tr>
+      <tr><td>Top ideas each department sends</td><td>3</td><td>Rounds &amp; timing</td></tr>
+      <tr><td>HoDs may use their own AI tool</td><td>On</td><td>Rounds &amp; timing</td></tr>
+      <tr><td>Students not on the list may submit</td><td>On</td><td>Rounds &amp; timing</td></tr>
+      <tr><td>Submission closes</td><td>2 weeks after opening</td><td>Rounds &amp; timing; one department's later date on its dashboard</td></tr>
+      <tr><td>HoD sign-in link</td><td>7 days, once</td><td>Sent again from the dashboard, or "Forgot your password" on the HoD sign-in page</td></tr>
+      <tr><td>The Gem of the round</td><td>Gem 1</td><td>Rounds &amp; timing (pick); Gems (edit)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Common questions</h3>
+  <div class="grid2">
+    <div class="card"><h3>Can a HoD change the Gem's questions?</h3><p>No. They are set by the owner and locked on every form. A HoD can add their own questions after them.</p></div>
+    <div class="card"><h3>I changed a Gem's questions. Do the forms change?</h3><p>Tick "Also put the new questions on the forms" when saving, or press Update on the Gem's page. Ideas already sent keep their answers.</p></div>
+    <div class="card"><h3>Why is an idea's score not the latest check?</h3><p>The score is the average of all its checks, so re-checking cannot be used to chase a better number.</p></div>
+    <div class="card"><h3>The AI was busy. Did the HoD lose a check?</h3><p>No. A portal check that fails or cannot be read is not counted. Try again a few minutes later.</p></div>
+    <div class="card"><h3>A student registered twice. Two records?</h3><p>No. Students are matched on PIN, then email, then phone, and uploads only fill gaps; re-uploading the same sheet adds nothing.</p></div>
+    <div class="card"><h3>A HoD sent the wrong picks.</h3><p>The owner can hand that department's picks back from the pipeline; the HoD can then decide and send again.</p></div>
+  </div>
+  <p class="muted sm" style="margin-top:8mm">Startup Discovery is part of the Marketing Command Centre. The module is switched on per client by the administrator (Clients → Startup Discovery — their own).</p>
+</section>
+
+</body>
+</html>

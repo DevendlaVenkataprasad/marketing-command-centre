@@ -332,7 +332,9 @@ $rows[] = ['uid' => '', 'label' => 'Team size', 'type' => 'number', 'required' =
 iv_form_save(A, (int) $form['id'], 'CM ideas', 'Hello students', $rows, true);
 $form = iv_form_for(A, $round, $cm);
 $fq = iv_form_questions($form);
-eq([count($fq), json_encode($fq), $form['title'], $form['intro']], [4, $ownerQs, 'CM ideas', 'Hello students'], 'rewording, an optional tick and an added question are ignored; title and note are saved');
+$cmDept = iv_department(A, $cm);
+eq([count($fq), json_encode($fq), $form['title'], $form['intro']], [4, $ownerQs, $round['name'] . ' — ' . $cmDept['name'], iv_form_note($round)],
+   'a HoD\'s rewording, optional tick, added question, title and note are all ignored');
 $drop = $rows;
 array_shift($drop);
 $drop[0]['uid'] = 'g_forged';
@@ -342,13 +344,35 @@ eq([json_encode(iv_form_questions($form)), (int) $form['is_open']], [$ownerQs, 0
 iv_form_save(A, (int) $form['id'], 'CM ideas', 'Hello students', [], true);
 eq(json_encode(iv_form_questions(iv_form_for(A, $round, $cm))), $ownerQs, 'a save with no questions keeps the owner\'s');
 $formHtml = (static function () use ($fq) { $h = ''; foreach ($fq as $n => $q) { $h .= iv_portal_q_row((string) $n, $q); } return $h; })();
-ok(substr_count($formHtml, 'Set by the owner') === 4 && !str_contains($formHtml, 'name="q['), 'the HoD form shows the questions with no inputs');
+ok(substr_count($formHtml, 'Set by the owner') === 4 && !str_contains($formHtml, 'name="q[') && !str_contains($formHtml, '<input') && !str_contains($formHtml, '<textarea'), 'the HoD form shows the questions with no inputs');
 $_GET = [];
 $GLOBALS['iv_porg'] = A;
 ob_start();
 iv_portal_view_form(A, iv_hod(A, (int) iv_hod_for_dept(A, $cm)['id']), iv_department(A, $cm), $round);
 $formPage = ob_get_clean();
-ok(!str_contains($formPage, 'data-addq') && !str_contains($formPage, 'Add a question') && str_contains($formPage, 'name="title"') && str_contains($formPage, 'name="is_open"'), 'no "Add a question" on the HoD form page; title, note and pause remain');
+ok(!str_contains($formPage, 'data-addq') && !str_contains($formPage, 'Add a question') && !str_contains($formPage, 'name="title"') && !str_contains($formPage, 'name="intro"')
+   && !str_contains($formPage, 'name="q[') && str_contains($formPage, 'Open the form again') === false && str_contains($formPage, 'Pause the form') && str_contains($formPage, 'Copy link')
+   && str_contains($formPage, 'What students see') && str_contains($formPage, 'hf-hero'), 'HoD form page: share, pause and a read-only preview; no title, note or question inputs');
+
+// The owner's note to students: on the Rounds form, put on every form of the round; a HoD save cannot undo it.
+$rv = iv_round(A, (int) $round['id']);
+iv_round_save(A, ['name' => $rv['name'], 'gem_id' => $rv['gem_id'], 'opens_at' => $rv['opens_at'], 'closes_at' => $rv['closes_at'], 'review_by' => $rv['review_by'], 'ai_limit' => $rv['ai_limit'],
+                  'top_n' => $rv['top_n'], 'status' => $rv['status'], 'allow_new' => $rv['allow_new'], 'own_ai_form' => 1, 'own_ai' => $rv['own_ai'], 'form_note' => 'Owner note: three sentences each.'], (int) $round['id']);
+$round = iv_round(A, (int) $round['id']);
+$formsOfRound = fabo_all('SELECT intro FROM iv_forms WHERE org_id = ? AND round_id = ?', 'ii', [A, (int) $round['id']]);
+ok($formsOfRound && count(array_filter($formsOfRound, static fn($r) => $r['intro'] === 'Owner note: three sentences each.')) === count($formsOfRound), 'the owner\'s note goes on every form of the round');
+iv_form_save(A, (int) $form['id'], 'HoD title', 'HoD note', [], false);
+$form = iv_form_for(A, $round, $cm);
+eq([$form['intro'], (int) $form['is_open']], ['Owner note: three sentences each.', 0], 'a HoD save keeps the owner\'s note; pausing still works');
+ob_start();
+iv_portal_view_form(A, iv_hod(A, (int) iv_hod_for_dept(A, $cm)['id']), iv_department(A, $cm), $round);
+$formPage = ob_get_clean();
+ok(str_contains($formPage, 'Open the form again') && str_contains($formPage, 'Owner note: three sentences each.') && str_contains($formPage, 'Paused'), 'a paused form says so, with the owner\'s note in the preview');
+iv_form_save(A, (int) $form['id'], '', '', [], true);
+iv_round_save(A, ['name' => $rv['name'], 'gem_id' => $rv['gem_id'], 'opens_at' => $rv['opens_at'], 'closes_at' => $rv['closes_at'], 'review_by' => $rv['review_by'], 'ai_limit' => $rv['ai_limit'],
+                  'top_n' => $rv['top_n'], 'status' => $rv['status'], 'allow_new' => $rv['allow_new'], 'own_ai_form' => 1, 'own_ai' => $rv['own_ai'], 'form_note' => ''], (int) $round['id']);
+$round = iv_round(A, (int) $round['id']);
+eq(iv_form_for(A, $round, $cm)['intro'], iv_form_note(null), 'an empty note brings back the standard one');
 
 /* ================================================================= ideas */
 $ans = [];

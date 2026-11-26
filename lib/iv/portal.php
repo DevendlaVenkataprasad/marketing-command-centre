@@ -85,6 +85,38 @@ function iv_pgo(array $q = []): void
     exit;
 }
 
+/**
+ * The HoD portal's own session: its own cookie and its own folder, kept for
+ * the portal's 8-hour idle limit (iv_portal_hod()). The server's default
+ * clears sessions after 24 idle minutes, which signed Heads out mid-work and
+ * turned their next click (even Sign out) into "Your session expired". Its
+ * own cookie also means signing out of the owner's portal in the same
+ * browser does not end a HoD session, nor the other way round.
+ */
+function iv_portal_session_start(): void
+{
+    if (session_status() === PHP_SESSION_NONE) {
+        require_once __DIR__ . '/../uploads.php';
+        $dir = fabo_upload_dir() . DIRECTORY_SEPARATOR . '.sessions-hod';   // uploads/ is never served
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0700, true);
+        }
+        if (is_dir($dir) && is_writable($dir)) {
+            ini_set('session.save_path', $dir);
+            ini_set('session.gc_maxlifetime', (string) (8 * 3600 + 900));
+        }
+        session_name('FABOHOD');
+    }
+    fabo_session();
+}
+
+/** The form's security token matches the session's (fabo_csrf_check(), without its error page). */
+function iv_portal_csrf_ok(): bool
+{
+    $sent = $_POST['csrf'] ?? '';
+    return is_string($sent) && $sent !== '' && !empty($_SESSION['csrf']) && hash_equals((string) $_SESSION['csrf'], $sent);
+}
+
 /* =================================================================== main */
 
 function iv_portal_main(): void
@@ -97,22 +129,33 @@ function iv_portal_main(): void
         return;
     }
     $GLOBALS['iv_porg'] = $org;
-    fabo_session();
+    iv_portal_session_start();
     $post = $_SERVER['REQUEST_METHOD'] === 'POST';
-    if ($post) {
-        fabo_csrf_check();
-    }
     $a = $post ? (string) ($_POST['a'] ?? '') : '';
     $v = (string) ($_GET['v'] ?? '');
+
+    // Signing out always works, even from a page left open after its session ended.
+    if ($a === 'logout') {
+        unset($_SESSION['iv']);
+        session_regenerate_id(true);
+        $_SESSION['iv_signed_out'] = 1;
+        iv_pgo();
+    }
+    // A form left open too long: no bare "session expired" page. Say what happened and go on.
+    if ($post && !iv_portal_csrf_ok()) {
+        if (iv_portal_hod($org)) {
+            iv_pflash('err', 'That page had been open a long time, so nothing was saved. Please try again.');
+            iv_pgo(array_filter(['v' => $v !== '' ? $v : null, 'id' => (int) ($_GET['id'] ?? 0) ?: null, 'round' => (int) ($_GET['round'] ?? 0) ?: null]));
+        }
+        $_SESSION['iv_timeout'] = 1;
+        $invite = (string) ($_GET['invite'] ?? '');
+        iv_pgo($invite !== '' ? ['invite' => $invite] : ($v === 'forgot' ? ['v' => 'forgot'] : []));
+    }
 
     $invite = (string) ($_GET['invite'] ?? '');
     if ($invite !== '') {
         iv_portal_invite($org, $invite, $a === 'set-password');
         return;
-    }
-    if ($a === 'logout') {
-        unset($_SESSION['iv']);
-        iv_pgo();
     }
     $me = iv_portal_hod($org);
     if (!$me) {
@@ -241,8 +284,11 @@ function iv_portal_signin(int $org, bool $posted): void
         }
     }
     $timed = !empty($_SESSION['iv_timeout']);
-    unset($_SESSION['iv_timeout']);
-    iv_portal_gate($org, 'Sign in', '<h1>Sign in</h1>' . ($timed && $err === '' ? '<div class="iv-flash info">You were signed out to keep your account safe. Please sign in again.</div>' : '')
+    $out = !empty($_SESSION['iv_signed_out']);
+    unset($_SESSION['iv_timeout'], $_SESSION['iv_signed_out']);
+    iv_portal_gate($org, 'Sign in', '<h1>Sign in</h1>'
+        . ($out && $err === '' ? '<div class="iv-flash ok" role="status">You are signed out. See you next time.</div>' : '')
+        . ($timed && !$out && $err === '' ? '<div class="iv-flash info">You were signed out after a long time away, to keep your account safe. Please sign in again.</div>' : '')
         . ($err !== '' ? '<div class="iv-flash err" role="alert">' . e($err) . '</div>' : '')
         . '<form method="post" class="iv-form">' . fabo_csrf_field() . '<input type="hidden" name="a" value="login">'
         . '<label class="field"><span>Email</span><input type="email" name="email" required autocomplete="username" value="' . e($email) . '" autofocus></label>'
@@ -342,15 +388,10 @@ function iv_portal_post(int $org, array $me, array $dept, ?array $round, string 
         }
         switch ($a) {
             case 'form-save':
+                // A HoD only opens or pauses the form; its title, note and questions are the owner's.
                 $form = iv_form_for($org, $round, $deptId);
-                $rows = [];
-                foreach ((array) ($_POST['q'] ?? []) as $r) {
-                    if (is_array($r)) {
-                        $rows[] = $r;
-                    }
-                }
-                iv_form_save($org, (int) $form['id'], (string) ($_POST['title'] ?? ''), (string) ($_POST['intro'] ?? ''), $rows, !empty($_POST['is_open']));
-                iv_pflash('ok', 'Form saved. Students who open the link now see these questions.');
+                iv_form_save($org, (int) $form['id'], '', '', [], !empty($_POST['is_open']));
+                iv_pflash('ok', !empty($_POST['is_open']) ? 'The form is open: students can send ideas.' : 'The form is paused: students cannot send ideas until you open it again.');
                 iv_pgo(['v' => 'form'] + $rq);
 
             case 'run-portal':
@@ -459,7 +500,7 @@ function iv_portal_view_home(int $org, array $me, array $dept, ?array $round): v
     echo '<section class="iv-card"><h2>Share the idea form</h2><p class="muted">Send this link to your students. Each student sends one idea; they sign it with their PIN / roll number.</p>'
        . iv_copy($url) . '<div class="iv-actions sm"><a class="btn btn-sm" href="https://wa.me/?text=' . e(rawurlencode($msg)) . '" target="_blank" rel="noopener">Share on WhatsApp</a>'
        . '<a class="btn btn-sm" href="mailto:?subject=' . e(rawurlencode('Submit your idea: ' . $round['name'])) . '&body=' . e(rawurlencode($msg)) . '">Email</a>'
-       . '<a class="btn btn-sm" href="' . e(iv_purl(['v' => 'form', 'round' => (int) $round['id']])) . '">Edit questions</a></div>'
+       . '<a class="btn btn-sm" href="' . e(iv_purl(['v' => 'form', 'round' => (int) $round['id']])) . '">View the form</a></div>'
        . (!(int) $form['is_open'] ? '<p class="iv-warn">The form is paused: students cannot send ideas.</p>' : ($open ? '' : '<p class="iv-warn">Submission is ' . ($now < $round['opens_at'] ? 'not open yet' : 'closed') . '.</p>')) . '</section>';
     echo '</div>';
 
@@ -528,27 +569,50 @@ function iv_portal_view_form(int $org, array $me, array $dept, ?array $round): v
     $form = iv_form_for($org, $round, (int) $dept['id']);
     $qs = iv_form_questions($form);
     $url = iv_form_url($org, $form['token']);
-    echo '<section class="iv-card"><div class="iv-card-h"><h2>Idea form · ' . e($round['name']) . '</h2><a class="btn btn-sm" href="' . e($url) . '" target="_blank" rel="noopener">Preview ↗</a></div>'
-       . '<p class="muted">Students also give their name, PIN / roll number, email, phone and an idea title. The questions are <span class="iv-pill g-team">Set by the owner</span>: they are what the AI scores, so they cannot be added to or changed here. You can change the title and the note to students, or pause the form.</p>'
-       . iv_copy($url) . '</section>';
-    echo '<form method="post" class="iv-form iv-card" id="formBuilder">' . fabo_csrf_field() . '<input type="hidden" name="a" value="form-save"><input type="hidden" name="round" value="' . (int) $round['id'] . '">'
-       . '<label class="field"><span>Title</span><input name="title" maxlength="190" value="' . e($form['title']) . '"></label>'
-       . '<label class="field"><span>Note to students</span><textarea name="intro" rows="3" maxlength="3000">' . e((string) $form['intro']) . '</textarea></label>'
-       . '<h3>Questions</h3><ol class="iv-qs" data-qs>';
+    $closes = iv_closes_for($round, (int) $dept['id']);
+    $why = iv_window_problem($round, (int) $dept['id']);
+    $paused = !(int) $form['is_open'];
+    $live = !$paused && $why === null;
+    $ideas = (int) (fabo_one('SELECT COUNT(*) n FROM iv_ideas WHERE org_id = ? AND round_id = ? AND department_id = ?', 'iii', [$org, (int) $round['id'], (int) $dept['id']])['n'] ?? 0);
+    $msg = 'Share your startup idea for ' . $round['name'] . ' (' . $dept['name'] . '). Submit before ' . iv_when($closes) . ': ' . $url;
+    [$state, $tone] = $paused ? ['Paused', 'paused'] : ($live ? ['Accepting ideas', 'live'] : [iv_now() < $round['opens_at'] ? 'Not open yet' : 'Closed', 'shut']);
+
+    // Header: the form's state, its dates and its count, and the one thing a HoD controls here.
+    echo '<section class="hf-hero ' . $tone . '"><div class="hf-hero-main"><span class="hf-state"><i aria-hidden="true"></i>' . e($state) . '</span>'
+       . '<h1>' . e($form['title']) . '</h1>'
+       . '<dl class="hf-facts"><div><dt>Opens</dt><dd>' . e(iv_when($round['opens_at'])) . '</dd></div><div><dt>Closes</dt><dd>' . e(iv_when($closes)) . '</dd></div>'
+       . '<div><dt>Ideas received</dt><dd>' . fabo_thousands($ideas) . '</dd></div><div><dt>Questions</dt><dd>' . count($qs) . '</dd></div></dl></div>'
+       . '<form method="post" class="hf-toggle">' . fabo_csrf_field() . '<input type="hidden" name="a" value="form-save"><input type="hidden" name="round" value="' . (int) $round['id'] . '">'
+       . ($paused ? '<input type="hidden" name="is_open" value="1"><button class="btn btn-primary">Open the form again</button><small>Students cannot send ideas while it is paused.</small>'
+                  : '<button class="btn" data-confirm="Pause the form? Students will not be able to send ideas until you open it again.">Pause the form</button><small>' . e($why ?? 'Students can send ideas now.') . '</small>')
+       . '</form></section>';
+
+    // Share.
+    echo '<section class="hf-share"><div class="hf-share-h"><h2>Share with your students</h2><p class="muted">One link for your whole department. Each student sends one idea, signed with their PIN / roll number.</p></div>'
+       . '<div class="hf-link"><input type="text" readonly value="' . e($url) . '" aria-label="Form link"><button type="button" class="btn btn-primary" data-copy="' . e($url) . '">Copy link</button></div>'
+       . '<div class="hf-ways"><a class="hf-way wa" href="https://wa.me/?text=' . e(rawurlencode($msg)) . '" target="_blank" rel="noopener"><b>WhatsApp</b><span>Send to a class group</span></a>'
+       . '<a class="hf-way" href="mailto:?subject=' . e(rawurlencode('Submit your idea: ' . $round['name'])) . '&amp;body=' . e(rawurlencode($msg)) . '"><b>Email</b><span>Write to your students</span></a>'
+       . '<a class="hf-way" href="' . e($url) . '" target="_blank" rel="noopener"><b>Open the form ↗</b><span>See it as a student does</span></a></div></section>';
+
+    // What students see: the owner's form, read-only.
+    echo '<section class="hf-preview"><div class="hf-preview-h"><h2>What students see</h2><span class="hf-lock" title="Set by the owner">🔒 Set by the owner</span></div>'
+       . '<div class="hf-paper"><h3>' . e($form['title']) . '</h3>'
+       . (trim((string) $form['intro']) !== '' ? '<p class="hf-note">' . nl2br(e((string) $form['intro'])) . '</p>' : '')
+       . '<div class="hf-who"><span>Name</span><span>PIN / roll number</span><span>Email</span><span>Phone</span><span>Idea title</span></div><ol class="hf-qs">';
     foreach ($qs as $n => $q) {
         echo iv_portal_q_row((string) $n, $q);
     }
-    echo '</ol>'
-       . '<label class="iv-check"><input type="checkbox" name="is_open" value="1"' . ((int) $form['is_open'] ? ' checked' : '') . '> Accepting ideas (untick to pause the form)</label>'
-       . '<div class="iv-actions"><button class="btn btn-primary">Save form</button></div></form>';
+    echo '</ol></div><p class="hf-foot">The title, the note to students and the questions are set by the owner of ' . e(iv_org_name($org))
+       . '. The questions are what the AI Gem scores, so they are the same for every department. If something needs changing, please contact the owner.</p></section>';
 }
 
 function iv_portal_q_row(string $n, array $q): string
 {
     // Every question on a HoD's form is the owner's: shown, never sent back, so nothing can be changed here.
-    return '<li class="iv-q gem locked"><div class="iv-qlock"><span class="iv-pill g-team">Set by the owner</span> <span class="muted sm">' . e(iv_question_types()[$q['type'] ?? 'long'] ?? 'Paragraph')
-         . (!empty($q['required']) ? ' · required' : ' · optional') . '</span></div><strong>' . e($q['label']) . '</strong>'
-         . (trim((string) ($q['help'] ?? '')) !== '' ? '<p class="muted sm">' . nl2br(e((string) $q['help'])) . '</p>' : '') . '</li>';
+    return '<li class="hf-q locked"><div class="hf-q-top"><strong>' . e($q['label']) . (!empty($q['required']) ? ' <em class="hf-req" title="Required">*</em>' : '') . '</strong>'
+         . '<span class="hf-type">' . e(iv_question_types()[$q['type'] ?? 'long'] ?? 'Paragraph') . (!empty($q['required']) ? '' : ' · optional') . '</span></div>'
+         . (trim((string) ($q['help'] ?? '')) !== '' ? '<p>' . nl2br(e((string) $q['help'])) . '</p>' : '')
+         . '<div class="hf-answer ' . (($q['type'] ?? 'long') === 'long' ? 'long' : '') . '" aria-hidden="true"></div><span class="sr-only">Set by the owner</span></li>';
 }
 
 function iv_portal_view_idea(int $org, array $me, array $dept, ?array $round): void

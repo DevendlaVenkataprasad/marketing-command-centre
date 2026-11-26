@@ -1219,6 +1219,8 @@ function iv_page_rounds(int $org): void
     echo '</select></label>'
        . '<label class="field"><span>AI checks per idea</span><input type="number" name="ai_limit" min="0" max="20" required value="' . (int) $v['ai_limit'] . '"><small>Portal and own-tool checks both count. An idea\'s score is the average of its checks. A Head can be given their own number on their dashboard.</small></label>'
        . '<label class="field"><span>Top ideas each department sends</span><input type="number" name="top_n" min="1" max="20" required value="' . (int) $v['top_n'] . '"></label>'
+       . '<label class="field wide"><span>Note to students (top of every department\'s form)</span><textarea name="form_note" rows="3" maxlength="3000" placeholder="' . e(iv_form_note(null)) . '">' . e((string) ($v['form_note'] ?? '')) . '</textarea>'
+       . '<small>Heads of Department cannot change it, nor the form\'s title ("' . e(($v['name'] ?: 'Round') . ' — Department') . '") or its questions (the Gem\'s). Leave empty for the standard note.</small></label>'
        . '</div><label class="iv-check"><input type="checkbox" name="allow_new" value="1"' . ((int) $v['allow_new'] ? ' checked' : '') . '> Students not on the list may submit (they are added to the department)</label>'
        . '<input type="hidden" name="own_ai_form" value="1"><label class="iv-check"><input type="checkbox" name="own_ai" value="1"' . ((int) ($v['own_ai'] ?? 1) ? ' checked' : '') . '> HoDs may also use their own AI tool (they paste its reply; it is kept for you). Untick so every score comes from the portal: no HoD can influence it.</label>'
        . '<div class="iv-actions"><button class="btn btn-primary">' . ($edit ? 'Save round' : 'Create round') . '</button></div></form>';

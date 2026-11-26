@@ -28,7 +28,7 @@
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/../google.php';     // fabo_setting()
 
-const IV_SCHEMA_VERSION = 4;
+const IV_SCHEMA_VERSION = 5;
 const IV_INVITE_DAYS = 7;
 const IV_MAX_IMPORT = 50000;
 
@@ -313,6 +313,8 @@ function iv_install(): void
         ['iv_ai_runs', 'reply_text', 'MEDIUMTEXT NULL'],
         ['iv_rounds', 'own_ai', 'TINYINT(1) NOT NULL DEFAULT 1'],
         ['iv_ideas', 'pick_note', 'TEXT NULL'],
+        /* 5: the owner's note to students, on every department's form of the round (HoDs cannot change it). */
+        ['iv_rounds', 'form_note', 'TEXT NULL'],
     ];
     foreach ($add as [$tbl, $c, $def]) {
         if (!$db->query("SHOW COLUMNS FROM $tbl LIKE '$c'")->num_rows) {
@@ -1853,10 +1855,44 @@ function iv_round_save(int $org, array $d, ?int $id = null): int
         }
         fabo_exec('UPDATE iv_rounds SET name = ?, gem_id = ?, opens_at = ?, closes_at = ?, review_by = ?, ai_limit = ?, top_n = ?, allow_new = ?, own_ai = ?, status = ? WHERE org_id = ? AND id = ?',
                   'sisssiiiisii', [$name, $gem, $opens, $closes, $review, $limit, $top, $allow, $ownAi, $status, $org, $id]);
-        return $id;
+    } else {
+        $id = fabo_exec('INSERT INTO iv_rounds (org_id, name, gem_id, opens_at, closes_at, review_by, ai_limit, top_n, allow_new, own_ai, status) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+                        'isisssiiiis', [$org, $name, $gem, $opens, $closes, $review, $limit, $top, $allow, $ownAi, $status]);
     }
-    return fabo_exec('INSERT INTO iv_rounds (org_id, name, gem_id, opens_at, closes_at, review_by, ai_limit, top_n, allow_new, own_ai, status) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
-                     'isisssiiiis', [$org, $name, $gem, $opens, $closes, $review, $limit, $top, $allow, $ownAi, $status]);
+    // The note to students: only when the form sent it, so other callers keep it.
+    if (array_key_exists('form_note', $d)) {
+        $note = iv_text((string) $d['form_note'], 3000);
+        fabo_exec('UPDATE iv_rounds SET form_note = ? WHERE org_id = ? AND id = ?', 'sii', [$note !== '' ? $note : null, $org, $id]);
+    }
+    iv_round_forms_refresh($org, (int) $id);
+    return (int) $id;
+}
+
+/** The note to students on a round's forms: the owner's, or the standard one. */
+function iv_form_note(?array $round): string
+{
+    $note = trim((string) ($round['form_note'] ?? ''));
+    return $note !== '' ? $note : "Share your idea with your Head of Department. Answer each question in a few clear sentences: the problem, who has it, and what you will build.";
+}
+
+/**
+ * Puts the owner's title ("Round — Department") and note on every
+ * department form of a round. HoDs cannot change either.
+ */
+function iv_round_forms_refresh(int $org, int $roundId): void
+{
+    $round = iv_round($org, $roundId);
+    if (!$round) {
+        return;
+    }
+    $note = iv_form_note($round);
+    foreach (fabo_all('SELECT f.id, f.title, f.intro, d.name AS dept FROM iv_forms f JOIN iv_departments d ON d.id = f.department_id
+                       WHERE f.org_id = ? AND f.round_id = ?', 'ii', [$org, $roundId]) as $f) {
+        $title = mb_substr($round['name'] . ' — ' . $f['dept'], 0, 190);
+        if ($title !== $f['title'] || $note !== (string) $f['intro']) {
+            fabo_exec('UPDATE iv_forms SET title = ?, intro = ? WHERE id = ? AND org_id = ?', 'ssii', [$title, $note, (int) $f['id'], $org]);
+        }
+    }
 }
 
 function iv_round_delete(int $org, int $id): void
@@ -1977,8 +2013,7 @@ function iv_form_for(int $org, array $round, int $deptId): array
         throw new InvalidArgumentException('That department is not in this organisation.');
     }
     fabo_exec('INSERT IGNORE INTO iv_forms (org_id, round_id, department_id, title, intro, questions_json, token) VALUES (?,?,?,?,?,?,?)', 'iiissss',
-              [$org, (int) $round['id'], $deptId, $round['name'] . ' — ' . $d['name'],
-               "Share your idea with your Head of Department. Answer each question in a few clear sentences: the problem, who has it, and what you will build.",
+              [$org, (int) $round['id'], $deptId, mb_substr($round['name'] . ' — ' . $d['name'], 0, 190), iv_form_note($round),
                json_encode(iv_default_questions($org, $round), JSON_UNESCAPED_UNICODE), bin2hex(random_bytes(16))]);
     return fabo_one('SELECT * FROM iv_forms WHERE org_id = ? AND round_id = ? AND department_id = ?', 'iii', [$org, (int) $round['id'], $deptId]);
 }
@@ -1998,11 +2033,10 @@ function iv_form_by_token(string $token): ?array
 }
 
 /**
- * Saves a form's title, note to students and open/paused state. The questions
- * are the owner's alone: always the round's Gem as the owner set it
- * (iv_form_locked_questions()). A HoD cannot add, change or remove a
- * question, so $rows is ignored. A round with no Gem keeps the form's
- * questions as they are.
+ * What a HoD can change on their form: whether it accepts ideas. The title,
+ * the note to students and the questions are the owner's (the round's name,
+ * its note, its Gem); they are put back as the owner set them on every save.
+ * $title, $intro and $rows are ignored.
  */
 function iv_form_save(int $org, int $formId, string $title, string $intro, array $rows, bool $open): void
 {
@@ -2011,9 +2045,8 @@ function iv_form_save(int $org, int $formId, string $title, string $intro, array
         throw new InvalidArgumentException('That form is not in this organisation.');
     }
     $qs = iv_form_locked_questions($org, $f) ?: iv_form_questions($f);
-    $title = iv_clean($title, 190) ?: $f['title'];
-    fabo_exec('UPDATE iv_forms SET title = ?, intro = ?, questions_json = ?, is_open = ? WHERE id = ?', 'sssii',
-              [$title, iv_text($intro, 3000), json_encode($qs, JSON_UNESCAPED_UNICODE), $open ? 1 : 0, $formId]);
+    fabo_exec('UPDATE iv_forms SET questions_json = ?, is_open = ? WHERE id = ?', 'sii', [json_encode($qs, JSON_UNESCAPED_UNICODE), $open ? 1 : 0, $formId]);
+    iv_round_forms_refresh($org, (int) $f['round_id']);
 }
 
 /**
